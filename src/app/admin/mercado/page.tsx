@@ -1,0 +1,7 @@
+import { createClient } from '@/lib/supabase/server';
+
+export default async function AdminMercadoPage() {
+  const supabase = await createClient();
+  const { data: items } = await supabase.from('market_items').select('id,title,price,category,status,city,state,created_at').order('created_at', { ascending: false }).limit(100);
+  return <div className="mx-auto max-w-7xl space-y-5"><div><p className="text-sm font-bold text-geek-orange">ADMINISTRAÇÃO</p><h1 className="text-2xl sm:text-3xl font-black">Mercado Geek</h1><p className="mt-2 text-sm text-slate-400">Acompanhe os itens anunciados pelos usuários.</p></div><div className="grid gap-3">{(items||[]).length===0?<div className="rounded-2xl border border-dashed border-geek-line bg-geek-panel p-8 text-center text-slate-400">Nenhum item anunciado ainda.</div>:(items||[]).map(item=><div key={item.id} className="rounded-2xl border border-geek-line bg-geek-panel p-4 sm:p-5"><div className="flex flex-col sm:flex-row sm:justify-between gap-2"><div><b>{item.title}</b><p className="text-xs text-slate-400">{item.category || 'Sem categoria'} · {[item.city,item.state].filter(Boolean).join(' / ') || 'Local não informado'}</p></div><div className="sm:text-right"><p className="font-bold text-geek-orange">R$ {Number(item.price).toLocaleString('pt-BR',{minimumFractionDigits:2})}</p><span className="text-xs text-slate-400">{item.status}</span></div></div></div>)}</div></div>;
+}
