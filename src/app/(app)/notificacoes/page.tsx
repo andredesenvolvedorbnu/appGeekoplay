@@ -1,2 +1,5 @@
-import { SimpleListPage } from '@/components/simple-list-page';
-export default function Page(){return <SimpleListPage title="Notificações" subtitle="Curtidas, comentários, seguidores, mensagens e eventos." table="notifications" fields={['title','body','type','created_at']}/>}
+import { NotificationsClient } from '@/components/notifications-client';
+
+export default function Page(){
+  return <NotificationsClient/>;
+}
