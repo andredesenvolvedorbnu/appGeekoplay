@@ -28,12 +28,14 @@ const filters = [
   ['Eventos', 'event'],
 ] as const;
 
+function isEventType(type:string){return type==='event'||type==='event_same'}
+
 function iconFor(type:string){
   if(type==='like') return <Heart size={18}/>;
   if(type==='comment') return <MessageCircle size={18}/>;
   if(type==='follow') return <UserPlus size={18}/>;
   if(type==='message') return <Mail size={18}/>;
-  if(type==='event') return <CalendarDays size={18}/>;
+  if(isEventType(type)) return <CalendarDays size={18}/>;
   return <Bell size={18}/>;
 }
 
@@ -95,7 +97,7 @@ export function NotificationsClient(){
     setRows(current=>current.map(n=>n.id===id?{...n,is_read:true}:n));
   }
 
-  const visible=filter==='all'?rows:rows.filter(n=>n.type===filter);
+  const visible=filter==='all'?rows:filter==='event'?rows.filter(n=>isEventType(n.type)):rows.filter(n=>n.type===filter);
   const unreadCount=rows.filter(n=>!n.is_read).length;
 
   return <div className="mx-auto max-w-3xl px-3 sm:px-4">
@@ -111,7 +113,7 @@ export function NotificationsClient(){
       return <button key={n.id} onClick={()=>markRead(n.id)} className={`w-full text-left rounded-2xl border p-4 transition ${n.is_read?'border-geek-line bg-geek-panel':'border-orange-500/40 bg-orange-500/5'}`}>
         <div className="flex gap-3">
           <div className="relative h-11 w-11 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-purple-600 grid place-items-center">
-            {actor?.avatar_url?<img src={actor.avatar_url} alt="" className="h-full w-full object-cover"/>:<span className="text-white">{iconFor(n.type)}</span>}
+            {actor?.avatar_url?<img src={actor.avatar_url} alt="" className="h-full w-full object-cover object-center"/>:<span className="text-white">{iconFor(n.type)}</span>}
             <span className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-geek-soft border border-geek-line grid place-items-center text-geek-orange">{iconFor(n.type)}</span>
           </div>
           <div className="min-w-0 flex-1">
