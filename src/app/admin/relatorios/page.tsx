@@ -1,27 +1,26 @@
 import { createClient } from '@/lib/supabase/server';
 
-export default async function AdminRelatoriosPage() {
-  const supabase = await createClient();
-  const [profiles, feedbacks, ads, adEvents] = await Promise.all([
-    supabase.from('profiles').select('is_pro,role'),
-    supabase.from('event_feedback').select('score,would_return,created_at'),
-    supabase.from('ads').select('id,title,active'),
-    supabase.from('ad_events').select('ad_id,event_type'),
-  ]);
+type Ad={id:string;title:string;active:boolean};
+type AdEvent={ad_id:string;event_type:string};
 
-  const users = profiles.data || [];
-  const totalUsers = users.length;
-  const premiumUsers = users.filter(u => u.is_pro).length;
-  const adminUsers = users.filter(u => u.role === 'admin').length;
-  const responses = feedbacks.data || [];
-  const scores = responses.map(r => r.score).filter((v): v is number => typeof v === 'number');
-  const avgScore = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '—';
-  const events = adEvents.data || [];
-  const impressions = events.filter(e => e.event_type === 'impression').length;
-  const clicks = events.filter(e => e.event_type === 'click').length;
-  const ctr = impressions ? ((clicks / impressions) * 100).toFixed(1) : '0.0';
-
-  return <div className="mx-auto max-w-7xl space-y-6"><div><p className="text-sm font-bold text-geek-orange">ADMINISTRAÇÃO</p><h1 className="text-2xl sm:text-3xl font-black">Relatórios</h1><p className="mt-2 text-sm text-slate-400">Indicadores gerais do GeekoPlay.</p></div><section className="grid grid-cols-2 lg:grid-cols-4 gap-3"><Metric label="Usuários" value={String(totalUsers)}/><Metric label="Premium" value={String(premiumUsers)}/><Metric label="Administradores" value={String(adminUsers)}/><Metric label="Nota média de eventos" value={avgScore}/><Metric label="Respostas de pesquisa" value={String(responses.length)}/><Metric label="Impressões de anúncios" value={String(impressions)}/><Metric label="Cliques em anúncios" value={String(clicks)}/><Metric label="CTR" value={`${ctr}%`}/></section><section className="rounded-2xl border border-geek-line bg-geek-panel p-5"><h2 className="font-bold">Campanhas cadastradas</h2><div className="mt-4 grid gap-2">{(ads.data||[]).length===0?<p className="text-sm text-slate-400">Nenhuma campanha ainda.</p>:(ads.data||[]).map(ad=><div key={ad.id} className="flex items-center justify-between rounded-xl border border-geek-line bg-geek-soft px-4 py-3 text-sm"><span>{ad.title}</span><span className={ad.active?'text-green-400':'text-slate-500'}>{ad.active?'Ativa':'Pausada'}</span></div>)}</div></section></div>;
+export default async function AdminRelatoriosPage(){
+ const supabase=await createClient();
+ const [profiles,feedbacks,adsResult,adEvents,premiumRequests,boostRequests]=await Promise.all([
+  supabase.from('profiles').select('is_pro,role'),
+  supabase.from('event_feedback').select('score,would_return,created_at'),
+  supabase.from('ads').select('id,title,active').order('created_at',{ascending:false}),
+  supabase.from('ad_events').select('ad_id,event_type'),
+  supabase.from('premium_requests').select('amount,status,requested_at'),
+  supabase.from('boost_requests').select('amount,status,requested_at')
+ ]);
+ const users=profiles.data||[];const totalUsers=users.length;const premiumUsers=users.filter(u=>u.is_pro).length;const pendingPremium=(premiumRequests.data||[]).filter(r=>r.status==='pending').length;const approvedPremium=(premiumRequests.data||[]).filter(r=>r.status==='approved');const premiumRevenue=approvedPremium.reduce((sum,r)=>sum+Number(r.amount||0),0);const approvedBoost=(boostRequests.data||[]).filter(r=>r.status==='approved').reduce((sum,r)=>sum+Number(r.amount||0),0);
+ const responses=feedbacks.data||[];const scores=responses.map(r=>r.score).filter((v):v is number=>typeof v==='number');const avgScore=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1):'—';const events=(adEvents.data||[]) as AdEvent[];const impressions=events.filter(e=>e.event_type==='impression').length;const clicks=events.filter(e=>e.event_type==='click').length;const ctr=impressions?((clicks/impressions)*100).toFixed(1):'0.0';const ads=(adsResult.data||[]) as Ad[];
+ const metrics=ads.map(ad=>{const adRows=events.filter(e=>e.ad_id===ad.id);const views=adRows.filter(e=>e.event_type==='impression').length;const adClicks=adRows.filter(e=>e.event_type==='click').length;return {...ad,impressions:views,clicks:adClicks,ctr:views?(adClicks/views)*100:0}}).sort((a,b)=>b.impressions-a.impressions);
+ const maxImpressions=Math.max(1,...metrics.map(m=>m.impressions));
+ return <div className="mx-auto max-w-7xl space-y-6"><div><p className="text-sm font-bold text-geek-orange">ADMINISTRAÇÃO</p><h1 className="text-2xl font-black sm:text-3xl">Relatórios</h1><p className="mt-2 text-sm text-slate-400">Assinaturas, receita, pesquisas e desempenho das campanhas.</p></div>
+  <section className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric label="Usuários" value={String(totalUsers)}/><Metric label="Premium ativos" value={String(premiumUsers)}/><Metric label="Premium pendentes" value={String(pendingPremium)}/><Metric label="Receita Premium aprovada" value={premiumRevenue.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}/><Metric label="Receita Boost aprovada" value={approvedBoost.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}/><Metric label="Nota média de eventos" value={avgScore}/><Metric label="Impressões" value={String(impressions)}/><Metric label="CTR geral" value={`${ctr}%`}/></section>
+  <section className="rounded-2xl border border-geek-line bg-geek-panel p-4 sm:p-5"><div><h2 className="font-black">Desempenho dos anúncios</h2><p className="mt-1 text-xs text-slate-500">Impressões, cliques e CTR por campanha.</p></div>{metrics.length===0?<p className="mt-5 text-sm text-slate-400">Nenhuma campanha cadastrada.</p>:<div className="mt-5 space-y-4">{metrics.map(ad=><div key={ad.id} className="rounded-xl border border-geek-line bg-geek-soft p-4"><div className="flex flex-wrap items-center gap-2"><b className="min-w-0 flex-1 truncate">{ad.title}</b><span className={`rounded-full px-2 py-1 text-[10px] ${ad.active?'bg-emerald-500/10 text-emerald-300':'bg-slate-500/10 text-slate-400'}`}>{ad.active?'Ativo':'Pausado'}</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-black/20"><div className="h-full rounded-full bg-geek-orange" style={{width:`${Math.max(ad.impressions?4:0,(ad.impressions/maxImpressions)*100)}%`}}/></div><div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs"><div><b className="block text-base">{ad.impressions}</b><span className="text-slate-500">Impressões</span></div><div><b className="block text-base">{ad.clicks}</b><span className="text-slate-500">Cliques</span></div><div><b className="block text-base">{ad.ctr.toFixed(1)}%</b><span className="text-slate-500">CTR</span></div></div></div>)}</div>}</section>
+  <section className="rounded-2xl border border-geek-line bg-geek-panel p-5"><h2 className="font-black">Inteligência de eventos</h2><div className="mt-4 grid gap-3 sm:grid-cols-3"><Metric label="Respostas de pesquisa" value={String(responses.length)} compact/><Metric label="Nota média" value={avgScore} compact/><Metric label="Voltariam" value={String(responses.filter(r=>r.would_return===true).length)} compact/></div><a href="/admin/feedbacks" className="mt-4 inline-flex text-sm font-bold text-geek-orange">Abrir feedbacks segmentados →</a></section>
+ </div>;
 }
-
-function Metric({ label, value }: { label:string; value:string }) { return <div className="rounded-2xl border border-geek-line bg-geek-panel p-4 sm:p-5"><p className="text-xs sm:text-sm text-slate-400">{label}</p><p className="mt-2 text-2xl sm:text-3xl font-black">{value}</p></div>; }
+function Metric({label,value,compact=false}:{label:string;value:string;compact?:boolean}){return <div className={`rounded-2xl border border-geek-line bg-geek-panel ${compact?'p-3':'p-4 sm:p-5'}`}><p className="text-xs text-slate-400 sm:text-sm">{label}</p><p className={`mt-2 font-black ${compact?'text-xl':'text-2xl sm:text-3xl'}`}>{value}</p></div>}
