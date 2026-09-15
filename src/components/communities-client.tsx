@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect,useMemo,useState } from 'react';
 import { Image as ImageIcon, Loader2, Plus, Search, Trophy, Users, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -117,11 +118,11 @@ export function CommunitiesClient(){
   {loading?<div className="grid place-items-center py-20"><Loader2 className="animate-spin text-geek-orange"/></div>:visible.length===0?<div className="rounded-2xl border border-dashed border-geek-line bg-geek-panel p-10 text-center text-slate-400"><Users className="mx-auto mb-3 text-geek-orange"/>Nenhuma comunidade encontrada.</div>:<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visible.map(c=>{
    const tops=topMembers[c.id]||[];
    return <article key={c.id} className="overflow-hidden rounded-2xl border border-geek-line bg-geek-panel">
-    <div className="flex aspect-[16/6] items-center justify-center overflow-hidden bg-gradient-to-br from-orange-500/30 via-purple-500/20 to-cyan-500/10">{c.cover_url&&<img src={c.cover_url} alt={`Capa de ${c.name}`} className="block h-auto max-h-full w-auto max-w-full object-contain object-center"/>}</div>
-    <div className="p-4"><div className="flex items-start gap-2"><div className="min-w-0 flex-1"><h2 className="font-black">{c.name}</h2><p className="text-xs text-slate-500">{c.category||'Geek'} · {c.visibility==='public'?'Aberta':'Fechada'}</p></div><span className="flex items-center gap-1 text-xs text-slate-400"><Users size={14}/>{members[c.id]||0}</span></div>
+    <Link href={`/comunidades/${c.id}`} className="block"><div className="flex aspect-[16/6] items-center justify-center overflow-hidden bg-gradient-to-br from-orange-500/30 via-purple-500/20 to-cyan-500/10">{c.cover_url&&<img src={c.cover_url} alt={`Capa de ${c.name}`} className="block h-auto max-h-full w-auto max-w-full object-contain object-center"/>}</div></Link>
+    <div className="p-4"><div className="flex items-start gap-2"><div className="min-w-0 flex-1"><Link href={`/comunidades/${c.id}`} className="font-black hover:text-orange-300">{c.name}</Link><p className="text-xs text-slate-500">{c.category||'Geek'} · {c.visibility==='public'?'Aberta':'Fechada'}</p></div><span className="flex items-center gap-1 text-xs text-slate-400"><Users size={14}/>{members[c.id]||0}</span></div>
      {c.description&&<p className="mt-3 line-clamp-3 text-sm text-slate-400">{c.description}</p>}
      {tops.length>0&&<div className="mt-4 rounded-xl bg-geek-soft p-3"><div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-500"><Trophy size={14} className="text-amber-400"/>Top membros</div><div className="space-y-2">{tops.map((member,index)=><div key={member.id} className="flex items-center gap-2"><div className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600">{member.avatar_url?<img src={member.avatar_url} alt="" className="h-full w-full object-cover object-center"/>:<span className="text-[10px] font-black">{index+1}</span>}</div><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold">{member.display_name}</p><p className="text-[10px] text-slate-500">Nível {member.level} · {member.xp} XP</p></div></div>)}</div></div>}
-     <button onClick={()=>join(c.id)} disabled={c.owner_id===userId} className={`mt-4 w-full rounded-xl px-3 py-2 text-sm font-bold ${mine.has(c.id)||c.owner_id===userId?'border border-geek-line text-slate-300':'bg-geek-orange text-white'}`}>{c.owner_id===userId?'Você é o dono':mine.has(c.id)?'Sair da comunidade':'Entrar na comunidade'}</button>
+     <div className="mt-4 grid grid-cols-2 gap-2"><Link href={`/comunidades/${c.id}`} className="rounded-xl border border-geek-line px-3 py-2 text-center text-sm font-bold hover:bg-geek-soft">Abrir</Link><button onClick={()=>join(c.id)} disabled={c.owner_id===userId||c.visibility==='private'} className={`rounded-xl px-3 py-2 text-sm font-bold ${mine.has(c.id)||c.owner_id===userId?'border border-geek-line text-slate-300':'bg-geek-orange text-white'} disabled:opacity-60`}>{c.owner_id===userId?'Você é o dono':c.visibility==='private'?'Fechada':mine.has(c.id)?'Sair':'Entrar'}</button></div>
     </div>
    </article>})}</div>}
  </div>;
