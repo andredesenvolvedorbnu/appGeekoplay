@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Check, Image as ImageIcon, Loader2, Pin, Share2, Sparkles, Star, Unpin } from 'lucide-react';
+import { Check, Image as ImageIcon, Loader2, Pin, Share2, Sparkles, Star } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 type RecapStats={posts:number;photos:number;pulses:number;events:number};
@@ -118,7 +118,7 @@ export function RecapClient(){
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{statCards.map(([label,value])=><div key={String(label)} className="rounded-2xl border border-geek-line bg-geek-panel p-4 text-center"><div className="text-2xl font-black text-geek-orange">{value}</div><div className="text-xs text-slate-400">{label}</div></div>)}</div>
 
       <div className="grid gap-2 sm:grid-cols-4">
-        <button onClick={togglePin} className="inline-flex items-center justify-center gap-2 rounded-xl border border-geek-line bg-geek-panel px-4 py-3 font-semibold">{recap.is_pinned?<Unpin size={17}/>:<Pin size={17}/>} {recap.is_pinned?'Desfixar do perfil':'Fixar no perfil'}</button>
+        <button onClick={togglePin} className="inline-flex items-center justify-center gap-2 rounded-xl border border-geek-line bg-geek-panel px-4 py-3 font-semibold"><Pin size={17}/> {recap.is_pinned?'Desfixar do perfil':'Fixar no perfil'}</button>
         <button onClick={postToPulse} className="inline-flex items-center justify-center gap-2 rounded-xl border border-geek-line bg-geek-panel px-4 py-3 font-semibold"><Sparkles size={17}/>Postar nos Pulses</button>
         <button onClick={share} className="inline-flex items-center justify-center gap-2 rounded-xl border border-geek-line bg-geek-panel px-4 py-3 font-semibold"><Share2 size={17}/>Compartilhar</button>
         <button onClick={build} disabled={building} className="inline-flex items-center justify-center gap-2 rounded-xl bg-geek-orange px-4 py-3 font-black disabled:opacity-60">{building?<Loader2 size={17} className="animate-spin"/>:<Check size={17}/>}Atualizar Recap</button>
