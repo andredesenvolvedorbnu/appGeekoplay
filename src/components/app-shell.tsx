@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, CalendarDays, Compass, Gamepad2, Home, LibraryBig, Mail, MessageSquare, Newspaper, Search, ShieldCheck, Store, Trophy, UserRound, Users } from 'lucide-react';
+import { Bell, CalendarDays, Compass, Gamepad2, Home, IdCard, LibraryBig, Mail, MessageSquare, Newspaper, PlusCircle, Search, ShieldCheck, Store, Trophy, UserRound, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 const main = [
@@ -11,6 +11,7 @@ const main = [
   ['Explorar', '/explorar', Compass],
   ['Eventos', '/eventos', CalendarDays],
   ['Comunidades', '/comunidades', Users],
+  ['Meu Geek Card', '/meu-card', IdCard],
   ['Mensagens', '/mensagens', MessageSquare],
   ['Notificações', '/notificacoes', Bell],
   ['Notícias', '/noticias', Newspaper],
@@ -112,7 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {[
           ['Início','/',Home],
           ['Explorar','/explorar',Compass],
-          ['Criar','/?criar=1',Gamepad2],
+          ['Criar','/criar',PlusCircle],
           ['Alertas','/notificacoes',Bell],
           [profile?.role === 'admin' ? 'ADM' : 'Perfil',profile?.role === 'admin' ? '/admin' : '/perfil',profile?.role === 'admin' ? ShieldCheck : UserRound]
         ].map(([label, href, Icon]: any)=><Link key={label} href={href} className={`flex min-w-14 flex-col items-center gap-1 text-[11px] ${active(href) ? 'text-orange-300' : 'text-slate-400'}`}><Icon size={21}/>{label}</Link>)}
