@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Gamepad2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -13,6 +13,25 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('error_description') || params.get('error');
+    if (!oauthError) return;
+
+    const decoded = decodeURIComponent(oauthError.replace(/\+/g, ' '));
+    const lower = decoded.toLowerCase();
+
+    if (lower.includes('unable to exchange external code') || lower.includes('server_error') || lower.includes('unexpected_failure')) {
+      setError('Não foi possível concluir o acesso com o Google. Verifique a configuração do Google e tente novamente.');
+    } else if (lower.includes('access_denied')) {
+      setError('O acesso com o Google foi cancelado.');
+    } else {
+      setError(traduzirErroAuth(decoded));
+    }
+
+    window.history.replaceState({}, '', '/login');
+  }, []);
 
   async function loginEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +52,6 @@ export default function LoginPage() {
         redirectTo: `${location.origin}/auth/callback`
       }
     });
-
     if (error) {
       setGoogleLoading(false);
       setError(traduzirErroAuth(error.message));
@@ -48,7 +66,9 @@ export default function LoginPage() {
           <div><h1 className="text-3xl font-black"><span className="text-geek-orange">Geeko</span>Play</h1><p className="text-sm text-slate-400">A comunidade geek que você merecia.</p></div>
         </div>
 
-        <button onClick={loginGoogle} disabled={googleLoading} className="w-full rounded-xl bg-white text-slate-900 py-3 font-bold mb-5 disabled:opacity-60">{googleLoading ? 'Conectando ao Google...' : 'Entrar com Google'}</button>
+        <button onClick={loginGoogle} disabled={googleLoading} className="w-full rounded-xl bg-white text-slate-900 py-3 font-bold mb-5 disabled:opacity-60">
+          {googleLoading ? 'Conectando ao Google...' : 'Entrar com Google'}
+        </button>
         <div className="text-center text-xs text-slate-500 mb-5">ou entre com seu e-mail</div>
 
         <form onSubmit={loginEmail} className="space-y-3">
