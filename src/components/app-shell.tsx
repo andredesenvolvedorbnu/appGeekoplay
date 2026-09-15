@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, CalendarDays, Compass, Gamepad2, Home, IdCard, LibraryBig, Mail, MessageSquare, Newspaper, PlusCircle, Search, ShieldCheck, Store, Trophy, UserRound, Users } from 'lucide-react';
+import { Award, Bell, CalendarDays, Compass, Gamepad2, Home, IdCard, LibraryBig, Mail, MessageSquare, Newspaper, PlusCircle, Search, ShieldCheck, Store, Trophy, UserRound, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 const main = [
@@ -12,6 +12,7 @@ const main = [
   ['Eventos', '/eventos', CalendarDays],
   ['Comunidades', '/comunidades', Users],
   ['Meu Geek Card', '/meu-card', IdCard],
+  ['Conquistas', '/conquistas', Award],
   ['Mensagens', '/mensagens', MessageSquare],
   ['Notificações', '/notificacoes', Bell],
   ['Notícias', '/noticias', Newspaper],
@@ -91,10 +92,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <p className="mb-2 px-3 text-[10px] font-bold tracking-[.2em] text-slate-500">INTERESSES</p>
         <div className="space-y-1">{interests.map(item => <Link key={item} href={`/explorar?categoria=${encodeURIComponent(item)}`} className="block rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-geek-soft hover:text-white">{item}</Link>)}</div>
 
-        <Link href="/perfil" className="mt-5 block rounded-2xl border border-yellow-700/50 bg-yellow-500/10 p-4">
+        <Link href="/conquistas" className="mt-5 block rounded-2xl border border-yellow-700/50 bg-yellow-500/10 p-4">
           <Trophy className="mb-2 text-yellow-400" size={20}/>
-          <b className="text-sm text-yellow-300">{profile?.is_pro ? 'Você é GeekoPlay PRO' : 'Seja Premium'}</b>
-          <p className="mt-1 text-xs text-slate-400">{profile?.is_pro ? 'Seu perfil possui benefícios Premium.' : 'Recursos exclusivos, destaques e vantagens no GeekoPlay.'}</p>
+          <b className="text-sm text-yellow-300">{profile?.is_pro ? 'Você é GeekoPlay PRO' : 'XP e Conquistas'}</b>
+          <p className="mt-1 text-xs text-slate-400">Acompanhe níveis, medalhas e seu progresso na comunidade.</p>
         </Link>
       </aside>
 
