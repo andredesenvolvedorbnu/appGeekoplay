@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function loginEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -23,6 +24,22 @@ export default function LoginPage() {
     location.href = '/';
   }
 
+  async function loginGoogle() {
+    setError('');
+    setGoogleLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${location.origin}/auth/callback`
+      }
+    });
+
+    if (error) {
+      setGoogleLoading(false);
+      setError(traduzirErroAuth(error.message));
+    }
+  }
+
   return (
     <main className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-geek-bg">
       <section className="w-full max-w-md rounded-3xl border border-geek-line bg-geek-panel p-5 sm:p-7 shadow-2xl">
@@ -31,8 +48,7 @@ export default function LoginPage() {
           <div><h1 className="text-3xl font-black"><span className="text-geek-orange">Geeko</span>Play</h1><p className="text-sm text-slate-400">A comunidade geek que você merecia.</p></div>
         </div>
 
-        <button disabled className="w-full rounded-xl bg-white/70 text-slate-500 py-3 font-bold mb-2 cursor-not-allowed">Entrar com Google</button>
-        <p className="text-center text-xs text-slate-500 mb-5">Login com Google será ativado em breve.</p>
+        <button onClick={loginGoogle} disabled={googleLoading} className="w-full rounded-xl bg-white text-slate-900 py-3 font-bold mb-5 disabled:opacity-60">{googleLoading ? 'Conectando ao Google...' : 'Entrar com Google'}</button>
         <div className="text-center text-xs text-slate-500 mb-5">ou entre com seu e-mail</div>
 
         <form onSubmit={loginEmail} className="space-y-3">
