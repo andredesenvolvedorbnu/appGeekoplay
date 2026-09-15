@@ -1,2 +1,9 @@
 import { AchievementsClient } from '@/components/achievements-client';
-export default function Page(){return <AchievementsClient/>}
+import { GamificationDashboard } from '@/components/gamification-dashboard';
+
+export default function Page(){
+  return <>
+    <AchievementsClient/>
+    <GamificationDashboard/>
+  </>;
+}
