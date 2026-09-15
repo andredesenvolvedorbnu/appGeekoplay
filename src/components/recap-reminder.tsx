@@ -28,9 +28,13 @@ export function RecapReminder(){
     })();
   },[supabase]);
 
-  if(!visible||!period)return null;
+  function close(){
+    if(!period)return;
+    sessionStorage.setItem(`recap-reminder-${period.year}-${period.semester}`,'1');
+    setVisible(false);
+  }
 
-  function close(){sessionStorage.setItem(`recap-reminder-${period.year}-${period.semester}`,'1');setVisible(false)}
+  if(!visible||!period)return null;
 
   return <div className="mx-auto mb-4 max-w-2xl px-3 sm:px-4">
     <div className="relative overflow-hidden rounded-2xl border border-orange-500/35 bg-gradient-to-r from-orange-500/15 via-purple-500/10 to-cyan-500/10 p-4 sm:p-5">
