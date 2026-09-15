@@ -26,6 +26,7 @@ const main = [
 const interests = ['Games', 'Anime', 'Séries', 'Filmes', 'HQs & Comics', 'Cosplay', 'Tecnologia', 'RPG', 'K-Pop', 'Mangá', 'Colecionáveis'];
 
 type ShellProfile = { display_name:string; bio:string|null; avatar_url:string|null; favorite_categories:string[]; role:'user'|'admin'; is_pro:boolean };
+type UpcomingEvent = { id:string; title:string; cover_url:string|null; starts_at:string; city:string|null; state:string|null; is_online:boolean };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
@@ -35,26 +36,46 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [query, setQuery] = useState('');
   const [userId,setUserId]=useState<string|null>(null);
   const [unreadCount,setUnreadCount]=useState(0);
+  const [unreadMessages,setUnreadMessages]=useState(0);
+  const [upcomingEvents,setUpcomingEvents]=useState<UpcomingEvent[]>([]);
   const [mobileMenu,setMobileMenu]=useState(false);
 
   async function loadSessionData(){
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setUserId(user.id);
-    const [{ data },{count}]=await Promise.all([
+    const [{ data },{count:notificationCount},{count:messageCount},{data:attendanceRows}]=await Promise.all([
       supabase.from('profiles').select('display_name,bio,avatar_url,favorite_categories,role,is_pro').eq('id', user.id).single(),
-      supabase.from('notifications').select('*',{count:'exact',head:true}).eq('user_id',user.id).eq('is_read',false)
+      supabase.from('notifications').select('*',{count:'exact',head:true}).eq('user_id',user.id).eq('is_read',false),
+      supabase.from('messages').select('*',{count:'exact',head:true}).eq('recipient_id',user.id).eq('is_read',false),
+      supabase.from('event_attendees').select('event_id').eq('user_id',user.id).eq('status','going')
     ]);
     if (data) setProfile(data as ShellProfile);
-    setUnreadCount(count||0);
+    setUnreadCount(notificationCount||0);
+    setUnreadMessages(messageCount||0);
+
+    const eventIds=(attendanceRows||[]).map(row=>row.event_id).filter(Boolean);
+    if(!eventIds.length){setUpcomingEvents([]);return;}
+    const {data:eventRows}=await supabase.from('events')
+      .select('id,title,cover_url,starts_at,city,state,is_online')
+      .in('id',eventIds)
+      .gte('starts_at',new Date().toISOString())
+      .order('starts_at',{ascending:true})
+      .limit(3);
+    setUpcomingEvents((eventRows||[]) as UpcomingEvent[]);
   }
 
   useEffect(() => { void loadSessionData(); }, [supabase, pathname]);
 
   useEffect(()=>{
     if(!userId)return;
-    const channel=supabase.channel(`shell-notifications-${userId}`)
+    const channel=supabase.channel(`shell-live-${userId}`)
       .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:`user_id=eq.${userId}`},()=>{void loadSessionData()})
+      .on('postgres_changes',{event:'*',schema:'public',table:'messages'},payload=>{
+        const row=(payload.new||payload.old||{}) as {sender_id?:string;recipient_id?:string};
+        if(row.sender_id===userId||row.recipient_id===userId)void loadSessionData();
+      })
+      .on('postgres_changes',{event:'*',schema:'public',table:'event_attendees',filter:`user_id=eq.${userId}`},()=>{void loadSessionData()})
       .subscribe();
     return()=>{void supabase.removeChannel(channel)};
   },[supabase,userId]);
@@ -73,7 +94,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return pathname.startsWith(href);
   }
 
-  const NavLink=({label,href,Icon,onClick}:{label:string;href:string;Icon:any;onClick?:()=>void})=><Link onClick={onClick} href={href} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active(href) ? 'bg-orange-500/12 font-bold text-orange-300' : 'text-slate-300 hover:bg-geek-soft hover:text-white'}`}><Icon size={18}/><span>{label}</span>{label==='Notificações'&&unreadCount>0&&<span className="ml-auto min-w-5 rounded-full bg-geek-orange px-1.5 py-0.5 text-center text-[10px] font-black text-white">{unreadCount>99?'99+':unreadCount}</span>}</Link>;
+  const NavLink=({label,href,Icon,onClick}:{label:string;href:string;Icon:any;onClick?:()=>void})=><Link onClick={onClick} href={href} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active(href) ? 'bg-orange-500/12 font-bold text-orange-300' : 'text-slate-300 hover:bg-geek-soft hover:text-white'}`}><Icon size={18}/><span>{label}</span>{label==='Notificações'&&unreadCount>0&&<span className="ml-auto min-w-5 rounded-full bg-geek-orange px-1.5 py-0.5 text-center text-[10px] font-black text-white">{unreadCount>99?'99+':unreadCount}</span>}{label==='Mensagens'&&unreadMessages>0&&<span className="ml-auto min-w-5 rounded-full bg-geek-orange px-1.5 py-0.5 text-center text-[10px] font-black text-white">{unreadMessages>99?'99+':unreadMessages}</span>}</Link>;
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-geek-bg text-slate-100">
@@ -83,7 +104,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           {profile?.role === 'admin' && <Link href="/admin" className="hidden items-center gap-1 rounded-lg border border-orange-500/30 bg-orange-500/10 px-2 py-1.5 text-xs font-bold text-orange-300 md:flex"><ShieldCheck size={15}/> ADM</Link>}
           <button onClick={()=>setMobileMenu(v=>!v)} className="rounded-lg p-2 hover:bg-geek-soft lg:hidden" aria-label="Abrir menu">{mobileMenu?<X size={18}/>:<Menu size={18}/>}</button>
-          <Link href="/mensagens" className="rounded-lg p-2 hover:bg-geek-soft" aria-label="Mensagens"><Mail size={18}/></Link>
+          <Link href="/mensagens" className="relative rounded-lg p-2 hover:bg-geek-soft" aria-label="Mensagens"><Mail size={18}/>{unreadMessages>0&&<span className="absolute right-0 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-geek-orange px-1 text-[9px] font-black text-white">{unreadMessages>9?'9+':unreadMessages}</span>}</Link>
           <Link href="/notificacoes" className="relative rounded-lg p-2 hover:bg-geek-soft" aria-label="Notificações"><Bell size={18}/>{unreadCount>0&&<span className="absolute right-0 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-geek-orange px-1 text-[9px] font-black text-white">{unreadCount>9?'9+':unreadCount}</span>}</Link>
           <Link href="/perfil" className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600" aria-label="Perfil">{profile?.avatar_url ? <img src={profile.avatar_url} alt="Perfil" className="h-full w-full object-cover object-center"/> : <UserRound size={16}/>}</Link>
         </div>
@@ -100,10 +121,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="min-h-screen pb-20 pt-16 lg:pb-8 lg:pl-64 xl:pr-72"><AdLayer/>{children}</main>
 
-      <aside className="fixed bottom-0 right-0 top-14 hidden w-72 border-l border-geek-line bg-geek-panel p-4 xl:block">
+      <aside className="fixed bottom-0 right-0 top-14 hidden w-72 overflow-y-auto border-l border-geek-line bg-geek-panel p-4 xl:block">
         <div className="rounded-2xl border border-geek-line bg-geek-panel p-4"><div className="flex items-center justify-between"><b>Sobre mim</b><Link href="/perfil" className="text-xs font-bold text-geek-orange">Editar</Link></div><p className="mt-2 text-sm leading-5 text-slate-400">{profile?.bio || 'Complete seu perfil e mostre seus fandoms para a comunidade.'}</p>{!!profile?.favorite_categories?.length && <div className="mt-3 flex flex-wrap gap-1">{profile.favorite_categories.slice(0,6).map(item=><span key={item} className="rounded-full bg-geek-soft px-2 py-1 text-[10px] text-slate-300">{item}</span>)}</div>}</div>
         <Link href="/recap" className="mt-3 block rounded-2xl border border-geek-line bg-geek-panel p-4 transition hover:border-orange-500/40"><div className="flex items-center gap-2"><Sparkles size={17} className="text-geek-orange"/><b>Meu Recap Geek</b></div><p className="mt-2 text-sm text-slate-400">Reviva sua metade do ano geek quando quiser.</p></Link>
-        <div className="mt-3 rounded-2xl border border-geek-line bg-geek-panel p-4"><div className="flex items-center justify-between"><b>Próximos eventos</b><Link href="/eventos" className="text-xs font-bold text-geek-orange">Ver todos</Link></div><p className="mt-2 text-sm text-slate-400">Os eventos que você confirmar aparecerão aqui.</p></div>
+        <div className="mt-3 rounded-2xl border border-geek-line bg-geek-panel p-4"><div className="flex items-center justify-between"><b>Próximos eventos</b><Link href="/eventos" className="text-xs font-bold text-geek-orange">Ver todos</Link></div>{upcomingEvents.length?<div className="mt-3 space-y-3">{upcomingEvents.map(event=><Link key={event.id} href={`/eventos?evento=${event.id}`} className="flex min-w-0 items-center gap-3 rounded-xl p-1 transition hover:bg-geek-soft"><div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-geek-soft">{event.cover_url?<img src={event.cover_url} alt="" className="h-full w-full object-contain object-center"/>:<CalendarDays size={18} className="text-geek-orange"/>}</div><div className="min-w-0"><p className="truncate text-sm font-bold">{event.title}</p><p className="mt-0.5 text-[11px] text-slate-400">{new Date(event.starts_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})} · {event.is_online?'Online':[event.city,event.state].filter(Boolean).join('/')}</p></div></Link>)}</div>:<p className="mt-2 text-sm text-slate-400">Você ainda não confirmou presença em nenhum evento futuro.</p>}</div>
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 flex h-16 items-center justify-around border-t border-geek-line bg-geek-panel lg:hidden">{[['Início','/',Home],['Explorar','/explorar',Compass],['Criar','/criar',PlusCircle],['Alertas','/notificacoes',Bell],[profile?.role === 'admin' ? 'ADM' : 'Perfil',profile?.role === 'admin' ? '/admin' : '/perfil',profile?.role === 'admin' ? ShieldCheck : UserRound]].map(([label, href, Icon]: any)=><Link key={label} href={href} className={`relative flex min-w-14 flex-col items-center gap-1 text-[11px] ${active(href) ? 'text-orange-300' : 'text-slate-400'}`}><Icon size={21}/>{label}{label==='Alertas'&&unreadCount>0&&<span className="absolute right-2 top-0 h-2 w-2 rounded-full bg-geek-orange"/>}</Link>)}</nav>
