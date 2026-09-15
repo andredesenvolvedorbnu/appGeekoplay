@@ -5,6 +5,34 @@
 :root { color-scheme: dark; }
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; background: #101319; color: #f5f7fb; }
-body { font-family: Arial, Helvetica, sans-serif; }
+body { font-family: Arial, Helvetica, sans-serif; transition: background-color .2s ease, color .2s ease; }
 a { color: inherit; text-decoration: none; }
-button, input, textarea { font: inherit; }
+button, input, textarea, select { font: inherit; }
+img, video { max-width: 100%; }
+
+@keyframes geekoplayKenBurns {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.055); }
+}
+
+html.light { color-scheme: light; }
+html.light body { background: #f5f7fb; color: #18202b; }
+html.light .bg-geek-bg { background-color: #f5f7fb !important; }
+html.light .bg-geek-panel { background-color: #ffffff !important; }
+html.light .bg-geek-soft { background-color: #edf1f6 !important; }
+html.light .border-geek-line { border-color: #d8dee8 !important; }
+html.light .text-slate-100,
+html.light .text-slate-200 { color: #18202b !important; }
+html.light .text-slate-300 { color: #334155 !important; }
+html.light .text-slate-400 { color: #64748b !important; }
+html.light .text-slate-500 { color: #778397 !important; }
+html.light [class*="bg-[#0d1015]"] { background-color: rgba(255,255,255,.96) !important; }
+html.light [class*="bg-[#171b22]"] { background-color: #ffffff !important; }
+html.light input,
+html.light textarea,
+html.light select { color: #18202b; }
+html.light ::placeholder { color: #7b8797; opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
