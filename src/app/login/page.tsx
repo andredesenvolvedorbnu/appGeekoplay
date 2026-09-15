@@ -33,14 +33,25 @@ export default function LoginPage() {
     window.history.replaceState({}, '', '/login');
   }, []);
 
+  async function redirectByRole(userId: string) {
+    const { data } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle();
+    location.href = data?.role === 'admin' ? '/admin' : '/';
+  }
+
   async function loginEmail(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) return setError(traduzirErroAuth(error.message));
-    location.href = '/';
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setLoading(false);
+      return setError(traduzirErroAuth(error.message));
+    }
+    if (!data.user) {
+      setLoading(false);
+      return setError('Não foi possível identificar sua conta. Tente novamente.');
+    }
+    await redirectByRole(data.user.id);
   }
 
   async function loginGoogle() {
