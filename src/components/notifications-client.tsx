@@ -1,128 +1,31 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Bell, CheckCheck, Heart, MessageCircle, UserPlus, Mail, CalendarDays, Loader2 } from 'lucide-react';
+import { useEffect,useMemo,useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Bell, CheckCheck, Heart, MessageCircle, UserPlus, Mail, CalendarDays, Loader2, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
-type Notification = {
-  id: string;
-  user_id: string;
-  actor_id: string | null;
-  type: string;
-  title: string;
-  body: string | null;
-  entity_type: string | null;
-  entity_id: string | null;
-  is_read: boolean;
-  created_at: string;
-};
+type Notification={id:string;user_id:string;actor_id:string|null;type:string;title:string;body:string|null;entity_type:string|null;entity_id:string|null;is_read:boolean;created_at:string};
+type Profile={id:string;display_name:string;username:string|null;avatar_url:string|null};
 
-type Profile = { id: string; display_name: string; username: string | null; avatar_url: string | null };
-
-const filters = [
-  ['Todas', 'all'],
-  ['Curtidas', 'like'],
-  ['Comentários', 'comment'],
-  ['Seguidores', 'follow'],
-  ['Mensagens', 'message'],
-  ['Eventos', 'event'],
-] as const;
-
+const filters=[['Todas','all'],['Curtidas','like'],['Comentários','comment'],['Seguidores','follow'],['Mensagens','message'],['Eventos','event'],['Comunidades','community']] as const;
 function isEventType(type:string){return type==='event'||type==='event_same'}
-
-function iconFor(type:string){
-  if(type==='like') return <Heart size={18}/>;
-  if(type==='comment') return <MessageCircle size={18}/>;
-  if(type==='follow') return <UserPlus size={18}/>;
-  if(type==='message') return <Mail size={18}/>;
-  if(isEventType(type)) return <CalendarDays size={18}/>;
-  return <Bell size={18}/>;
-}
-
-function relativeTime(value:string){
-  const diff=Math.max(0,Date.now()-new Date(value).getTime());
-  const min=Math.floor(diff/60000);
-  if(min<1)return 'agora';
-  if(min<60)return `há ${min} min`;
-  const h=Math.floor(min/60);
-  if(h<24)return `há ${h} h`;
-  const d=Math.floor(h/24);
-  if(d<7)return `há ${d} d`;
-  return new Date(value).toLocaleDateString('pt-BR');
-}
+function isCommunityType(type:string){return type.startsWith('community_')}
+function iconFor(type:string){if(type==='like')return <Heart size={18}/>;if(type==='comment')return <MessageCircle size={18}/>;if(type==='follow')return <UserPlus size={18}/>;if(type==='message')return <Mail size={18}/>;if(isEventType(type))return <CalendarDays size={18}/>;if(isCommunityType(type))return <Users size={18}/>;return <Bell size={18}/>}
+function relativeTime(value:string){const diff=Math.max(0,Date.now()-new Date(value).getTime());const min=Math.floor(diff/60000);if(min<1)return'agora';if(min<60)return`há ${min} min`;const h=Math.floor(min/60);if(h<24)return`há ${h} h`;const d=Math.floor(h/24);if(d<7)return`há ${d} d`;return new Date(value).toLocaleDateString('pt-BR')}
 
 export function NotificationsClient(){
-  const supabase=useMemo(()=>createClient(),[]);
-  const [rows,setRows]=useState<Notification[]>([]);
-  const [profiles,setProfiles]=useState<Record<string,Profile>>({});
-  const [filter,setFilter]=useState('all');
-  const [loading,setLoading]=useState(true);
+ const router=useRouter();const supabase=useMemo(()=>createClient(),[]);const [rows,setRows]=useState<Notification[]>([]);const [profiles,setProfiles]=useState<Record<string,Profile>>({});const [filter,setFilter]=useState('all');const [loading,setLoading]=useState(true);
+ async function load(){setLoading(true);const {data:{user}}=await supabase.auth.getUser();if(!user){setRows([]);setLoading(false);return}const {data}=await supabase.from('notifications').select('*').eq('user_id',user.id).order('created_at',{ascending:false}).limit(100);const safe=(data||[]) as Notification[];setRows(safe);const ids=[...new Set(safe.map(n=>n.actor_id).filter(Boolean))] as string[];if(ids.length){const {data:ps}=await supabase.from('profiles').select('id,display_name,username,avatar_url').in('id',ids);const map:Record<string,Profile>={};(ps||[]).forEach((p:Profile)=>map[p.id]=p);setProfiles(map)}else setProfiles({});setLoading(false)}
+ useEffect(()=>{void load();const channel=supabase.channel('notifications-live').on('postgres_changes',{event:'*',schema:'public',table:'notifications'},()=>void load()).subscribe();return()=>{void supabase.removeChannel(channel)}},[supabase]);
+ async function markAllRead(){const unread=rows.filter(n=>!n.is_read).map(n=>n.id);if(!unread.length)return;await supabase.from('notifications').update({is_read:true}).in('id',unread);setRows(current=>current.map(n=>({...n,is_read:true})))}
+ async function markRead(id:string){const row=rows.find(n=>n.id===id);if(!row||row.is_read)return;await supabase.from('notifications').update({is_read:true}).eq('id',id);setRows(current=>current.map(n=>n.id===id?{...n,is_read:true}:n))}
+ function destination(n:Notification){if(n.entity_type==='post'&&n.entity_id)return`/publicacoes/${n.entity_id}`;if(n.entity_type==='event'&&n.entity_id)return`/eventos/${n.entity_id}`;if(n.entity_type==='community'&&n.entity_id)return`/comunidades/${n.entity_id}`;if(n.entity_type==='market'&&n.entity_id)return`/mercado/${n.entity_id}`;if(n.entity_type==='profile'&&n.entity_id)return`/perfil/${n.entity_id}`;if(n.type==='message')return'/mensagens';if(n.type==='follow'&&n.actor_id)return`/perfil/${n.actor_id}`;return null}
+ async function openNotification(n:Notification){await markRead(n.id);const target=destination(n);if(target)router.push(target)}
+ const visible=filter==='all'?rows:filter==='event'?rows.filter(n=>isEventType(n.type)):filter==='community'?rows.filter(n=>isCommunityType(n.type)):rows.filter(n=>n.type===filter);const unreadCount=rows.filter(n=>!n.is_read).length;
 
-  async function load(){
-    setLoading(true);
-    const {data:{user}}=await supabase.auth.getUser();
-    if(!user){setRows([]);setLoading(false);return;}
-    const {data}=await supabase.from('notifications').select('*').eq('user_id',user.id).order('created_at',{ascending:false}).limit(100);
-    const safe=(data||[]) as Notification[];
-    setRows(safe);
-    const ids=[...new Set(safe.map(n=>n.actor_id).filter(Boolean))] as string[];
-    if(ids.length){
-      const {data:ps}=await supabase.from('profiles').select('id,display_name,username,avatar_url').in('id',ids);
-      const map:Record<string,Profile>={};
-      (ps||[]).forEach((p:Profile)=>map[p.id]=p);
-      setProfiles(map);
-    } else setProfiles({});
-    setLoading(false);
-  }
-
-  useEffect(()=>{
-    void load();
-    const channel=supabase.channel('notifications-live')
-      .on('postgres_changes',{event:'*',schema:'public',table:'notifications'},()=>{void load();})
-      .subscribe();
-    return()=>{void supabase.removeChannel(channel)};
-  },[supabase]);
-
-  async function markAllRead(){
-    const unread=rows.filter(n=>!n.is_read).map(n=>n.id);
-    if(!unread.length)return;
-    await supabase.from('notifications').update({is_read:true}).in('id',unread);
-    setRows(current=>current.map(n=>({...n,is_read:true})));
-  }
-
-  async function markRead(id:string){
-    const row=rows.find(n=>n.id===id);
-    if(!row || row.is_read)return;
-    await supabase.from('notifications').update({is_read:true}).eq('id',id);
-    setRows(current=>current.map(n=>n.id===id?{...n,is_read:true}:n));
-  }
-
-  const visible=filter==='all'?rows:filter==='event'?rows.filter(n=>isEventType(n.type)):rows.filter(n=>n.type===filter);
-  const unreadCount=rows.filter(n=>!n.is_read).length;
-
-  return <div className="mx-auto max-w-3xl px-3 sm:px-4">
-    <div className="mb-5 flex flex-wrap items-center gap-3">
-      <div><h1 className="text-2xl font-black">Notificações</h1><p className="text-sm text-slate-400 mt-1">Curtidas, comentários, seguidores, mensagens e eventos.</p></div>
-      <button onClick={markAllRead} disabled={!unreadCount} className="ml-auto rounded-xl border border-geek-line bg-geek-panel px-3 py-2 text-sm flex items-center gap-2 disabled:opacity-40"><CheckCheck size={17}/>Marcar todas como lidas</button>
-    </div>
-
-    <div className="mb-4 overflow-x-auto"><div className="flex min-w-max gap-2">{filters.map(([label,value])=><button key={value} onClick={()=>setFilter(value)} className={`rounded-full border px-3 py-2 text-xs ${filter===value?'border-geek-orange bg-geek-orange text-white':'border-geek-line bg-geek-panel text-slate-300'}`}>{label}</button>)}</div></div>
-
-    {loading?<div className="py-20 grid place-items-center text-slate-400"><Loader2 className="animate-spin"/></div>:visible.length===0?<div className="rounded-2xl border border-dashed border-geek-line bg-geek-panel p-10 text-center text-slate-400"><Bell className="mx-auto mb-3 text-geek-orange"/>Nenhuma notificação por aqui.</div>:<div className="space-y-2">{visible.map(n=>{
-      const actor=n.actor_id?profiles[n.actor_id]:null;
-      return <button key={n.id} onClick={()=>markRead(n.id)} className={`w-full text-left rounded-2xl border p-4 transition ${n.is_read?'border-geek-line bg-geek-panel':'border-orange-500/40 bg-orange-500/5'}`}>
-        <div className="flex gap-3">
-          <div className="relative h-11 w-11 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-purple-600 grid place-items-center">
-            {actor?.avatar_url?<img src={actor.avatar_url} alt="" className="h-full w-full object-cover object-center"/>:<span className="text-white">{iconFor(n.type)}</span>}
-            <span className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-geek-soft border border-geek-line grid place-items-center text-geek-orange">{iconFor(n.type)}</span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start gap-2"><p className="font-bold text-sm">{actor?.display_name?`${actor.display_name} · ${n.title}`:n.title}</p>{!n.is_read&&<span className="ml-auto mt-1 h-2 w-2 shrink-0 rounded-full bg-geek-orange"/>}</div>
-            {n.body&&<p className="mt-1 text-sm text-slate-400 break-words">{n.body}</p>}
-            <p className="mt-1 text-xs text-slate-500">{relativeTime(n.created_at)}</p>
-          </div>
-        </div>
-      </button>
-    })}</div>}
-  </div>;
+ return <div className="mx-auto max-w-3xl px-3 sm:px-4"><div className="mb-5 flex flex-wrap items-center gap-3"><div><h1 className="text-2xl font-black">Notificações</h1><p className="mt-1 text-sm text-slate-400">Curtidas, comentários, seguidores, mensagens, eventos e comunidades.</p></div><button onClick={markAllRead} disabled={!unreadCount} className="ml-auto flex items-center gap-2 rounded-xl border border-geek-line bg-geek-panel px-3 py-2 text-sm disabled:opacity-40"><CheckCheck size={17}/>Marcar todas como lidas</button></div>
+ <div className="mb-4 overflow-x-auto"><div className="flex min-w-max gap-2">{filters.map(([label,value])=><button key={value} onClick={()=>setFilter(value)} className={`rounded-full border px-3 py-2 text-xs ${filter===value?'border-geek-orange bg-geek-orange text-white':'border-geek-line bg-geek-panel text-slate-300'}`}>{label}</button>)}</div></div>
+ {loading?<div className="grid place-items-center py-20 text-slate-400"><Loader2 className="animate-spin"/></div>:visible.length===0?<div className="rounded-2xl border border-dashed border-geek-line bg-geek-panel p-10 text-center text-slate-400"><Bell className="mx-auto mb-3 text-geek-orange"/>Nenhuma notificação por aqui.</div>:<div className="space-y-2">{visible.map(n=>{const actor=n.actor_id?profiles[n.actor_id]:null;const target=destination(n);return <button key={n.id} onClick={()=>void openNotification(n)} className={`w-full rounded-2xl border p-4 text-left transition ${n.is_read?'border-geek-line bg-geek-panel':'border-orange-500/40 bg-orange-500/5'} ${target?'hover:border-orange-500/40':''}`}><div className="flex gap-3"><div className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600">{actor?.avatar_url?<img src={actor.avatar_url} alt="" className="h-full w-full object-cover object-center"/>:<span className="text-white">{iconFor(n.type)}</span>}<span className="absolute -bottom-1 -right-1 grid h-6 w-6 place-items-center rounded-full border border-geek-line bg-geek-soft text-geek-orange">{iconFor(n.type)}</span></div><div className="min-w-0 flex-1"><div className="flex items-start gap-2"><p className="text-sm font-bold">{actor?.display_name?`${actor.display_name} · ${n.title}`:n.title}</p>{!n.is_read&&<span className="ml-auto mt-1 h-2 w-2 shrink-0 rounded-full bg-geek-orange"/>}</div>{n.body&&<p className="mt-1 break-words text-sm text-slate-400">{n.body}</p>}<div className="mt-1 flex items-center gap-2 text-xs text-slate-500"><span>{relativeTime(n.created_at)}</span>{target&&<span>· abrir</span>}</div></div></div></button>})}</div>}
+ </div>
 }
