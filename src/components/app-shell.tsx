@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, CalendarDays, Compass, Gamepad2, Home, Mail, MessageSquare, Newspaper, Search, ShieldCheck, Store, Trophy, UserRound, Users } from 'lucide-react';
+import { Bell, CalendarDays, Compass, Gamepad2, Home, LibraryBig, Mail, MessageSquare, Newspaper, Search, ShieldCheck, Store, Trophy, UserRound, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 const main = [
@@ -14,6 +14,7 @@ const main = [
   ['Mensagens', '/mensagens', MessageSquare],
   ['Notificações', '/notificacoes', Bell],
   ['Notícias', '/noticias', Newspaper],
+  ['Minha Coleção', '/colecao', LibraryBig],
   ['Mercado Geek', '/mercado', Store]
 ] as const;
 
@@ -74,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/mensagens" className="rounded-lg p-2 hover:bg-geek-soft" aria-label="Mensagens"><Mail size={18}/></Link>
           <Link href="/notificacoes" className="rounded-lg p-2 hover:bg-geek-soft" aria-label="Notificações"><Bell size={18}/></Link>
           <Link href="/perfil" className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600" aria-label="Perfil">
-            {profile?.avatar_url ? <img src={profile.avatar_url} alt="Perfil" className="h-full w-full object-cover"/> : <UserRound size={16}/>} 
+            {profile?.avatar_url ? <img src={profile.avatar_url} alt="Perfil" className="h-full w-full object-cover object-center"/> : <UserRound size={16}/>} 
           </Link>
         </div>
       </header>
