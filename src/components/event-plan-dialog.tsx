@@ -24,12 +24,13 @@ export function EventPlanDialog({open,userId,onClose,onSaved}:{open:boolean;user
   if(Number.isNaN(parsed.getTime())){setError('Informe uma data válida.');return}
   setBusy(true);
   try{
-   const {data:plan,error:planError}=await supabase.from('user_event_plans').insert({user_id:userId,title:title.trim(),event_date:parsed.toISOString(),location:location.trim(),note:note.trim()||null}).select('id').single();
+   const cleanTitle=title.trim();const cleanLocation=location.trim();const cleanNote=note.trim();
+   const {data:plan,error:planError}=await supabase.from('user_event_plans').insert({user_id:userId,title:cleanTitle,event_date:parsed.toISOString(),location:cleanLocation,note:cleanNote||null}).select('id').single();
    if(planError||!plan)throw planError||new Error('Falha ao salvar evento.');
    if(share){
-    const cardData={event_plan_id:plan.id,title:title.trim(),event_date:parsed.toISOString(),location:location.trim(),note:note.trim()||null};
-    const content=`Vou em ${title.trim()}! 🎟️`;
-    const {data:post,error:postError}=await supabase.from('posts').insert({author_id:userId,content,category:'Eventos',post_type:'event_plan',card_data:cardData}).select('id').single();
+    const cardData={event_plan_id:plan.id,title:cleanTitle,event_date:parsed.toISOString(),location:cleanLocation,note:cleanNote||null};
+    const details=[`🎟️ Vou em ${cleanTitle}!`,`📅 ${parsed.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}`,`📍 ${cleanLocation}`,cleanNote||null].filter(Boolean).join('\n');
+    const {data:post,error:postError}=await supabase.from('posts').insert({author_id:userId,content:details,category:'Eventos',post_type:'event_plan',card_data:cardData}).select('id').single();
     if(postError)throw postError;
     await supabase.from('user_event_plans').update({shared_post_id:post.id,updated_at:new Date().toISOString()}).eq('id',plan.id);
    }
