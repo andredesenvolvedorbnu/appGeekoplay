@@ -1,15 +1,17 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { BarChart3, CalendarDays, Gamepad2, Home, Megaphone, Newspaper, ShieldCheck, Store, Users } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardList, Flag, Gamepad2, Home, Megaphone, Newspaper, ShieldCheck, Store, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 
 const menu = [
   ['Visão geral', '/admin', Home],
   ['Usuários', '/admin/usuarios', Users],
   ['Eventos', '/admin/eventos', CalendarDays],
+  ['Feedbacks', '/admin/feedbacks', ClipboardList],
   ['Notícias', '/admin/noticias', Newspaper],
   ['Anúncios', '/admin/anuncios', Megaphone],
   ['Mercado Geek', '/admin/mercado', Store],
+  ['Denúncias', '/admin/denuncias', Flag],
   ['Relatórios', '/admin/relatorios', BarChart3],
 ] as const;
 
