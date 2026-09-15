@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Award, Bell, CalendarDays, Compass, Crown, Gamepad2, Home, IdCard, LibraryBig, Mail, MessageSquare, Newspaper, PlusCircle, Rocket, Search, ShieldCheck, Store, Trophy, UserRound, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { AdLayer } from '@/components/ad-layer';
 
 const main = [
   ['Página inicial', '/', Home],
@@ -23,14 +24,7 @@ const main = [
 
 const interests = ['Games', 'Anime', 'Séries', 'Filmes', 'HQs & Comics', 'Cosplay', 'Tecnologia', 'RPG', 'K-Pop', 'Mangá', 'Colecionáveis'];
 
-type ShellProfile = {
-  display_name: string;
-  bio: string | null;
-  avatar_url: string | null;
-  favorite_categories: string[];
-  role: 'user' | 'admin';
-  is_pro: boolean;
-};
+type ShellProfile = { display_name:string; bio:string|null; avatar_url:string|null; favorite_categories:string[]; role:'user'|'admin'; is_pro:boolean };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
@@ -63,13 +57,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen overflow-x-hidden bg-geek-bg text-slate-100">
       <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-3 border-b border-geek-line bg-[#0d1015]/95 px-3 backdrop-blur sm:px-4">
-        <Link href="/" className="flex min-w-fit items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-xl bg-geek-orange"><Gamepad2 size={19}/></span>
-          <strong><span className="text-geek-orange">Geeko</span>Play</strong>
-        </Link>
-        <form onSubmit={submitSearch} className="hidden max-w-md flex-1 items-center gap-2 rounded-xl bg-geek-soft px-3 py-2 text-slate-400 sm:flex">
-          <Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} className="w-full bg-transparent outline-none" placeholder="Buscar pessoas, posts e fandoms..."/>
-        </form>
+        <Link href="/" className="flex min-w-fit items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-xl bg-geek-orange"><Gamepad2 size={19}/></span><strong><span className="text-geek-orange">Geeko</span>Play</strong></Link>
+        <form onSubmit={submitSearch} className="hidden max-w-md flex-1 items-center gap-2 rounded-xl bg-geek-soft px-3 py-2 text-slate-400 sm:flex"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} className="w-full bg-transparent outline-none" placeholder="Buscar pessoas, posts e fandoms..."/></form>
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           {profile?.role === 'admin' && <Link href="/admin" className="hidden items-center gap-1 rounded-lg border border-orange-500/30 bg-orange-500/10 px-2 py-1.5 text-xs font-bold text-orange-300 md:flex"><ShieldCheck size={15}/> ADM</Link>}
           <Link href="/mensagens" className="rounded-lg p-2 hover:bg-geek-soft" aria-label="Mensagens"><Mail size={18}/></Link>
@@ -85,7 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Link href="/premium" className="mt-3 block rounded-2xl border border-orange-500/30 bg-orange-500/10 p-4"><Crown className="mb-2 text-orange-300" size={20}/><b className="text-sm text-orange-200">{profile?.is_pro ? 'Você é GeekoPlay PRO' : 'Seja Premium'}</b><p className="mt-1 text-xs text-slate-400">{profile?.is_pro?'Seu selo PRO está ativo.':'Veja benefícios e solicite sua assinatura.'}</p></Link>
       </aside>
 
-      <main className="min-h-screen pb-20 pt-16 lg:pb-8 lg:pl-64 xl:pr-72">{children}</main>
+      <main className="min-h-screen pb-20 pt-16 lg:pb-8 lg:pl-64 xl:pr-72"><AdLayer/>{children}</main>
 
       <aside className="fixed bottom-0 right-0 top-14 hidden w-72 border-l border-geek-line bg-[#0d1015] p-4 xl:block">
         <div className="rounded-2xl border border-geek-line bg-geek-panel p-4"><div className="flex items-center justify-between"><b>Sobre mim</b><Link href="/perfil" className="text-xs font-bold text-geek-orange">Editar</Link></div><p className="mt-2 text-sm leading-5 text-slate-400">{profile?.bio || 'Complete seu perfil e mostre seus fandoms para a comunidade.'}</p>{!!profile?.favorite_categories?.length && <div className="mt-3 flex flex-wrap gap-1">{profile.favorite_categories.slice(0,6).map(item=><span key={item} className="rounded-full bg-geek-soft px-2 py-1 text-[10px] text-slate-300">{item}</span>)}</div>}</div>
