@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Search, Flame, Loader2, Users, Image as ImageIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -12,11 +13,19 @@ type Profile={id:string;display_name:string;username:string|null;avatar_url:stri
 
 export function ExploreClient(){
   const supabase=useMemo(()=>createClient(),[]);
+  const searchParams=useSearchParams();
   const [posts,setPosts]=useState<Post[]>([]);
   const [profiles,setProfiles]=useState<Profile[]>([]);
   const [loading,setLoading]=useState(true);
   const [query,setQuery]=useState('');
   const [category,setCategory]=useState('Todos');
+
+  useEffect(()=>{
+    const q=searchParams.get('q')||'';
+    const c=searchParams.get('categoria')||'Todos';
+    setQuery(q);
+    setCategory(categories.includes(c)?c:'Todos');
+  },[searchParams]);
 
   useEffect(()=>{(async()=>{
     const [{data:postRows},{data:profileRows}]=await Promise.all([
@@ -34,7 +43,7 @@ export function ExploreClient(){
     const bySearch=!normalized||`${p.content||''} ${p.category||''}`.toLowerCase().includes(normalized);
     return byCategory&&bySearch;
   });
-  const filteredProfiles=profiles.filter(p=>!normalized?false:`${p.display_name} ${p.username||''} ${p.bio||''}`.toLowerCase().includes(normalized)).slice(0,8);
+  const filteredProfiles=profiles.filter(p=>!normalized?false:`${p.display_name} ${p.username||''} ${p.bio||''} ${(p.favorite_categories||[]).join(' ')}`.toLowerCase().includes(normalized)).slice(0,8);
 
   const trending=useMemo(()=>{
     const counts:Record<string,number>={};
@@ -60,7 +69,7 @@ export function ExploreClient(){
 
     {filteredProfiles.length>0&&<section>
       <div className="mb-3 flex items-center gap-2"><Users size={18} className="text-geek-orange"/><h2 className="font-bold">Pessoas</h2></div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{filteredProfiles.map(p=><Link href={`/perfil/${p.id}`} key={p.id} className="rounded-2xl border border-geek-line bg-geek-panel p-4 hover:border-orange-500/50 transition"><div className="flex items-center gap-3"><div className="h-11 w-11 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-purple-600 shrink-0">{p.avatar_url&&<img src={p.avatar_url} alt="" className="h-full w-full object-cover"/>}</div><div className="min-w-0"><b className="block truncate text-sm">{p.display_name}</b><span className="text-xs text-slate-500">@{p.username||'geek'}</span></div></div>{p.bio&&<p className="mt-3 text-xs text-slate-400 line-clamp-2">{p.bio}</p>}</Link>)}</div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{filteredProfiles.map(p=><Link href={`/perfil/${p.id}`} key={p.id} className="rounded-2xl border border-geek-line bg-geek-panel p-4 hover:border-orange-500/50 transition"><div className="flex items-center gap-3"><div className="h-11 w-11 rounded-full overflow-hidden bg-gradient-to-br from-orange-400 to-purple-600 shrink-0">{p.avatar_url&&<img src={p.avatar_url} alt="" className="h-full w-full object-cover object-center"/>}</div><div className="min-w-0"><b className="block truncate text-sm">{p.display_name}</b><span className="text-xs text-slate-500">@{p.username||'geek'}</span></div></div>{p.bio&&<p className="mt-3 text-xs text-slate-400 line-clamp-2">{p.bio}</p>}</Link>)}</div>
     </section>}
 
     {trending.length>0&&<section>
@@ -70,7 +79,7 @@ export function ExploreClient(){
 
     <section>
       <div className="mb-3 flex items-center gap-2"><ImageIcon size={18} className="text-geek-orange"/><h2 className="font-bold">Publicações</h2><span className="text-xs text-slate-500">{filteredPosts.length}</span></div>
-      {filteredPosts.length===0?<div className="rounded-2xl border border-dashed border-geek-line bg-geek-panel p-10 text-center text-slate-400">Nenhuma publicação encontrada.</div>:<div className="columns-1 sm:columns-2 lg:columns-3 gap-3">{filteredPosts.map(post=><article key={post.id} className="mb-3 break-inside-avoid overflow-hidden rounded-2xl border border-geek-line bg-geek-panel">{post.image_url&&<div className="w-full bg-black/30 flex items-center justify-center"><img src={post.image_url} alt="Publicação" className="block h-auto w-full max-h-[560px] object-contain"/></div>}<div className="p-4">{post.category&&<span className="inline-flex rounded-full bg-orange-500/10 px-2 py-1 text-[10px] text-orange-300">{post.category}</span>}{post.content&&<p className="mt-2 text-sm text-slate-300 whitespace-pre-wrap break-words">{post.content}</p>}</div></article>)}</div>}
+      {filteredPosts.length===0?<div className="rounded-2xl border border-dashed border-geek-line bg-geek-panel p-10 text-center text-slate-400">Nenhuma publicação encontrada.</div>:<div className="columns-1 sm:columns-2 lg:columns-3 gap-3">{filteredPosts.map(post=><article key={post.id} className="mb-3 break-inside-avoid overflow-hidden rounded-2xl border border-geek-line bg-geek-panel">{post.image_url&&<div className="w-full bg-black/30 flex items-center justify-center overflow-hidden"><img src={post.image_url} alt="Publicação" className="block h-auto w-full max-h-[560px] object-contain object-center"/></div>}<div className="p-4">{post.category&&<span className="inline-flex rounded-full bg-orange-500/10 px-2 py-1 text-[10px] text-orange-300">{post.category}</span>}{post.content&&<p className="mt-2 text-sm text-slate-300 whitespace-pre-wrap break-words">{post.content}</p>}</div></article>)}</div>}
     </section>
   </div>;
 }
