@@ -1,9 +1,24 @@
 import type { Metadata, Viewport } from 'next';
+import { PwaRegister } from '@/components/pwa-register';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'GeekoPlay',
-  description: 'A comunidade geek que você merecia.'
+  description: 'A comunidade geek que você merecia.',
+  applicationName: 'GeekoPlay',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'GeekoPlay',
+    statusBarStyle: 'black-translucent'
+  },
+  formatDetection: {
+    telephone: false
+  },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg'
+  }
 };
 
 export const viewport: Viewport = {
@@ -19,7 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{__html:themeInit}}/></head>
-      <body>{children}</body>
+      <body><PwaRegister/>{children}</body>
     </html>
   );
 }
