@@ -1,26 +1,16 @@
 import { NextResponse } from 'next/server';
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 import { createClient } from '@/lib/supabase/server';
 
 function decode(value:string){return value.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')}
 function meta(html:string,property:string){const patterns=[new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']+)["'][^>]*>`,'i'),new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${property}["'][^>]*>`,'i')];for(const p of patterns){const m=html.match(p);if(m?.[1])return decode(m[1].trim())}return null}
+function blockedIp(address:string){if(address==='127.0.0.1'||address==='0.0.0.0'||address==='::1'||address==='::')return true;if(address.startsWith('10.')||address.startsWith('192.168.')||address.startsWith('169.254.'))return true;const v4=isIP(address)===4?address.split('.').map(Number):null;if(v4&&v4[0]===172&&v4[1]>=16&&v4[1]<=31)return true;if(v4&&v4[0]===100&&v4[1]>=64&&v4[1]<=127)return true;const lower=address.toLowerCase();return lower.startsWith('fc')||lower.startsWith('fd')||lower.startsWith('fe80:')||lower.startsWith('::ffff:127.')||lower.startsWith('::ffff:10.')||lower.startsWith('::ffff:192.168.')}
+async function assertPublic(url:URL){if(!['http:','https:'].includes(url.protocol))throw new Error('PROTOCOLO');if(url.username||url.password)throw new Error('CREDENCIAIS');const host=url.hostname.toLowerCase();if(host==='localhost'||host.endsWith('.localhost')||host.endsWith('.local')||host==='metadata.google.internal')throw new Error('HOST');if(isIP(host)&&blockedIp(host))throw new Error('IP');const addresses=await lookup(host,{all:true,verbatim:true});if(!addresses.length||addresses.some(({address})=>blockedIp(address)))throw new Error('DNS')}
+async function safeFetch(initial:URL){let current=new URL(initial.toString());for(let redirects=0;redirects<=4;redirects++){await assertPublic(current);const response=await fetch(current.toString(),{headers:{'User-Agent':'Mozilla/5.0 GeekoPlay/1.0','Accept':'text/html,application/xhtml+xml'},redirect:'manual',signal:AbortSignal.timeout(8000)});if([301,302,303,307,308].includes(response.status)){const location=response.headers.get('location');if(!location)throw new Error('REDIRECT');current=new URL(location,current);continue}if(!response.ok)throw new Error('HTTP');const contentType=response.headers.get('content-type')||'';if(!contentType.includes('text/html')&&!contentType.includes('application/xhtml+xml'))throw new Error('TIPO');return {response,current}}throw new Error('REDIRECTS')}
 
 export async function POST(request:Request){
-  const supabase=await createClient();
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user)return NextResponse.json({error:'Não autorizado.'},{status:401});
-  const {data:profile}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();
-  if(profile?.role!=='admin')return NextResponse.json({error:'Acesso restrito ao administrador.'},{status:403});
-  const body=await request.json().catch(()=>({}));
-  const raw=String(body?.url||'').trim();
-  let url:URL; try{url=new URL(raw);if(!['http:','https:'].includes(url.protocol))throw new Error()}catch{return NextResponse.json({error:'Informe uma URL válida.'},{status:400})}
-  try{
-    const response=await fetch(url.toString(),{headers:{'User-Agent':'Mozilla/5.0 GeekoPlay/1.0'},redirect:'follow',signal:AbortSignal.timeout(8000)});
-    if(!response.ok)throw new Error();
-    const html=(await response.text()).slice(0,800000);
-    const title=meta(html,'og:title')||decode((html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]||'').trim())||url.hostname;
-    const summary=meta(html,'og:description')||meta(html,'description')||'';
-    const image_url=meta(html,'og:image')||'';
-    const source_name=meta(html,'og:site_name')||url.hostname.replace(/^www\./,'');
-    return NextResponse.json({title,summary,image_url,source_name,source_url:url.toString()});
-  }catch{return NextResponse.json({error:'Não foi possível ler automaticamente esse site. Você ainda pode preencher os dados manualmente.'},{status:422})}
+ const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)return NextResponse.json({error:'Não autorizado.'},{status:401});const {data:profile}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();if(profile?.role!=='admin')return NextResponse.json({error:'Acesso restrito ao administrador.'},{status:403});
+ const body=await request.json().catch(()=>({}));const raw=String(body?.url||'').trim();let url:URL;try{url=new URL(raw);await assertPublic(url)}catch{return NextResponse.json({error:'Informe uma URL pública válida.'},{status:400})}
+ try{const {response,current}=await safeFetch(url);const html=(await response.text()).slice(0,800000);const title=meta(html,'og:title')||decode((html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]||'').trim())||current.hostname;const summary=meta(html,'og:description')||meta(html,'description')||'';const rawImage=meta(html,'og:image')||'';let image_url='';if(rawImage){try{const image=new URL(rawImage,current);await assertPublic(image);image_url=image.toString()}catch{image_url=''}}const source_name=meta(html,'og:site_name')||current.hostname.replace(/^www\./,'');return NextResponse.json({title:title.slice(0,500),summary:summary.slice(0,1500),image_url,source_name:source_name.slice(0,160),source_url:current.toString()})}catch{return NextResponse.json({error:'Não foi possível ler automaticamente esse site. Você ainda pode preencher os dados manualmente.'},{status:422})}
 }
