@@ -1,6 +1,14 @@
 import type { Metadata, Viewport } from 'next';
+import { Montserrat } from 'next/font/google';
 import { PwaRegister } from '@/components/pwa-register';
 import './globals.css';
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  weight: ['200','600'],
+  display: 'swap',
+  variable: '--font-montserrat'
+});
 
 export const metadata: Metadata = {
   title: 'GeekoPlay',
@@ -32,7 +40,7 @@ const themeInit = `(function(){try{var t=localStorage.getItem('geekoplay-theme')
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning className={montserrat.variable}>
       <head><script dangerouslySetInnerHTML={{__html:themeInit}}/></head>
       <body><PwaRegister/>{children}</body>
     </html>
