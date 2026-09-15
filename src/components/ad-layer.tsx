@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect,useMemo,useState } from 'react';
-import { Copy,ExternalLink,X } from 'lucide-react';
+import { Copy,ExternalLink,Image as ImageIcon,X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
@@ -16,9 +16,16 @@ export function AdLayer(){
  if(!ad)return null;
  async function click(){if(userId)void supabase.from('ad_events').insert({ad_id:ad!.id,user_id:userId,event_type:'click'});if(ad?.cta_url)window.open(ad.cta_url,'_blank','noopener,noreferrer')}
  async function copyCode(){if(ad?.promo_code){await navigator.clipboard.writeText(ad.promo_code)}}
- const content=<div className="overflow-hidden rounded-2xl border border-orange-500/25 bg-[#171b22] shadow-2xl"><div className="relative flex max-h-72 min-h-24 w-full items-center justify-center overflow-hidden bg-black/30">{ad.image_url?<img src={ad.image_url} alt={ad.title} className="block h-auto max-h-72 w-auto max-w-full object-contain object-center"/>:<div className="p-8 text-sm text-slate-500">Conteúdo patrocinado</div>}<button onClick={()=>setAd(null)} className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white" aria-label="Fechar anúncio"><X size={16}/></button></div><div className="p-4"><p className="text-[10px] font-black uppercase tracking-[.18em] text-orange-300">Patrocinado</p><h3 className="mt-1 text-lg font-black">{ad.title}</h3>{ad.description&&<p className="mt-2 text-sm leading-6 text-slate-400">{ad.description}</p>}{ad.has_promo_code&&ad.promo_code&&<div className="mt-3 rounded-xl border border-geek-line bg-geek-soft p-3"><p className="text-[10px] uppercase text-slate-500">Código promocional</p><div className="mt-1 flex items-center justify-between gap-3"><b className="truncate text-orange-300">{ad.promo_code}</b><button onClick={()=>void copyCode()} className="flex shrink-0 items-center gap-1 text-xs font-bold"><Copy size={14}/>Copiar</button></div>{ad.promo_instructions&&<p className="mt-1 text-xs text-slate-500">{ad.promo_instructions}</p>}</div>}{ad.cta_url&&<button onClick={()=>void click()} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-geek-orange px-4 py-3 font-black">{ad.cta_label||'Saiba mais'}<ExternalLink size={16}/></button>}{ad.display_seconds>0&&<p className="mt-2 text-center text-[10px] text-slate-600">Este anúncio fecha automaticamente.</p>}</div></div>;
- if(ad.placement==='sponsored_feed')return <div className="mx-auto mb-4 max-w-2xl px-3 sm:px-4">{content}</div>;
- if(ad.placement==='footer_banner')return <div className="fixed inset-x-3 bottom-20 z-[70] mx-auto max-w-2xl lg:bottom-4">{content}</div>;
- if(ad.placement==='bottom_sheet')return <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/55 p-0 sm:p-4" onClick={()=>setAd(null)}><div className="w-full max-w-xl" onClick={e=>e.stopPropagation()}>{content}</div></div>;
- return <div className="fixed inset-0 z-[80] grid place-items-center bg-black/65 p-3" onClick={()=>setAd(null)}><div className="w-full max-w-lg" onClick={e=>e.stopPropagation()}>{content}</div></div>;
+
+ const media=<div className="relative flex aspect-[16/9] w-full items-center justify-center overflow-hidden bg-black/30 sm:aspect-[16/8]">
+   {ad.image_url?<img src={ad.image_url} alt={ad.title} className="block h-full w-full object-contain object-center"/>:<div className="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-500"><ImageIcon size={28}/><span className="text-xs">Imagem do anúncio</span></div>}
+   <button onClick={()=>setAd(null)} className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white backdrop-blur" aria-label="Fechar anúncio"><X size={16}/></button>
+ </div>;
+
+ const content=<div className="mx-auto w-full max-w-full overflow-hidden rounded-2xl border border-orange-500/25 bg-[#171b22] shadow-2xl">{media}<div className="p-4"><p className="text-[10px] font-black uppercase tracking-[.18em] text-orange-300">Patrocinado</p><h3 className="mt-1 break-words text-lg font-black">{ad.title}</h3>{ad.description&&<p className="mt-2 break-words text-sm leading-6 text-slate-400">{ad.description}</p>}{ad.has_promo_code&&ad.promo_code&&<div className="mt-3 rounded-xl border border-geek-line bg-geek-soft p-3"><p className="text-[10px] uppercase text-slate-500">Código promocional</p><div className="mt-1 flex items-center justify-between gap-3"><b className="truncate text-orange-300">{ad.promo_code}</b><button onClick={()=>void copyCode()} className="flex shrink-0 items-center gap-1 text-xs font-bold"><Copy size={14}/>Copiar</button></div>{ad.promo_instructions&&<p className="mt-1 break-words text-xs text-slate-500">{ad.promo_instructions}</p>}</div>}{ad.cta_url&&<button onClick={()=>void click()} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-geek-orange px-4 py-3 font-black">{ad.cta_label||'Saiba mais'}<ExternalLink size={16}/></button>}{ad.display_seconds>0&&<p className="mt-2 text-center text-[10px] text-slate-600">Este anúncio fecha automaticamente.</p>}</div></div>;
+
+ if(ad.placement==='sponsored_feed')return <div className="mx-auto mb-4 w-full max-w-2xl px-3 sm:px-4">{content}</div>;
+ if(ad.placement==='footer_banner')return <div className="fixed inset-x-0 bottom-20 z-[70] flex justify-center px-3 lg:bottom-4"><div className="w-full max-w-2xl">{content}</div></div>;
+ if(ad.placement==='bottom_sheet')return <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/55 px-3 py-5 sm:p-6" onClick={()=>setAd(null)}><div className="my-auto w-full max-w-xl" onClick={e=>e.stopPropagation()}>{content}</div></div>;
+ return <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/65 px-3 py-5 sm:p-6" onClick={()=>setAd(null)}><div className="my-auto w-full max-w-lg" onClick={e=>e.stopPropagation()}>{content}</div></div>;
 }
