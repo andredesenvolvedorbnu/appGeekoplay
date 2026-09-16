@@ -83,22 +83,38 @@ section > div[class*="aspect-[3/1]"] + div.relative > div:first-child > div:firs
 }
 
 html.light { color-scheme: light; }
-html.light body { background: #f5f7fb; color: #18202b; }
+html.light body { background: #f5f7fb; color: #172033; }
 html.light .bg-geek-bg { background-color: #f5f7fb !important; }
 html.light .bg-geek-panel { background-color: #ffffff !important; }
 html.light .bg-geek-soft { background-color: #edf1f6 !important; }
-html.light .border-geek-line { border-color: #d8dee8 !important; }
+html.light .border-geek-line { border-color: #cbd5e1 !important; }
+
+/* Contraste do tema claro: como a fonte de corpo é ExtraLight, os tons
+   secundários precisam ser mais escuros do que no tema dark para manter leitura. */
 html.light .text-slate-100,
-html.light .text-slate-200 { color: #18202b !important; }
-html.light .text-slate-300 { color: #334155 !important; }
-html.light .text-slate-400 { color: #64748b !important; }
-html.light .text-slate-500 { color: #778397 !important; }
-html.light [class*="bg-[#0d1015]"] { background-color: rgba(255,255,255,.96) !important; }
+html.light .text-slate-200 { color: #172033 !important; }
+html.light .text-slate-300 { color: #283548 !important; }
+html.light .text-slate-400 { color: #3f4f63 !important; }
+html.light .text-slate-500 { color: #526174 !important; }
+html.light .text-slate-600 { color: #475569 !important; }
+html.light .text-slate-700 { color: #334155 !important; }
+html.light .text-slate-800,
+html.light .text-slate-900 { color: #172033 !important; }
+
+html.light [class*="bg-[#0d1015]"] { background-color: rgba(255,255,255,.97) !important; }
 html.light [class*="bg-[#171b22]"] { background-color: #ffffff !important; }
 html.light input,
 html.light textarea,
-html.light select { color: #18202b; }
-html.light ::placeholder { color: #7b8797; opacity: 1; }
+html.light select { color: #172033; }
+html.light ::placeholder { color: #5f6f82; opacity: 1; }
+html.light input:disabled,
+html.light textarea:disabled,
+html.light select:disabled { color: #475569; opacity: .85; }
+
+/* Elementos que usam cinza por estilo visual não podem perder legibilidade no claro. */
+html.light .text-slate-400\/80 { color: #475569 !important; }
+html.light .text-slate-500\/80 { color: #526174 !important; }
+html.light .opacity-60 { opacity: .75; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
