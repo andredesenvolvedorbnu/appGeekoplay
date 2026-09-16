@@ -65,16 +65,17 @@ export function MarketClient(){
   if(!userId||!form.title.trim()||!form.price){setMessage('Preencha título e preço.');return}
   const parsedPrice=Number(String(form.price).replace(/\./g,'').replace(',','.'));
   if(!Number.isFinite(parsedPrice)||parsedPrice<=0){setMessage('Informe um preço válido.');return}
-  setPublishing(true);setMessage('');
+  setPublishing(true);setMessage('');let uploadedPath:string|null=null;
   try{
    let urls:string[]=[];
-   if(file){const processed=await cropMarketImage(file,zoom,offsetX,offsetY);const path=`${userId}/${crypto.randomUUID()}.webp`;const {error}=await supabase.storage.from('market').upload(path,processed,{contentType:'image/webp',cacheControl:'3600',upsert:false});if(error)throw error;urls=[supabase.storage.from('market').getPublicUrl(path).data.publicUrl]}
+   if(file){const processed=await cropMarketImage(file,zoom,offsetX,offsetY);uploadedPath=`${userId}/${crypto.randomUUID()}.webp`;const {error}=await supabase.storage.from('market').upload(uploadedPath,processed,{contentType:'image/webp',cacheControl:'3600',upsert:false});if(error)throw error;urls=[supabase.storage.from('market').getPublicUrl(uploadedPath).data.publicUrl]}
    const {error}=await supabase.from('market_items').insert({seller_id:userId,title:form.title.trim(),description:form.description.trim()||null,image_urls:urls,price:parsedPrice,category:form.category,item_condition:form.item_condition,city:form.city.trim()||null,state:form.state.trim()||null,whatsapp:form.whatsapp.trim()||null,instagram:form.instagram.trim()||null,status:'available'});if(error)throw error;
    setForm(initialForm);clearPhoto();setShowForm(false);await load();
-  }catch{setMessage('Não foi possível publicar o anúncio. Revise os dados e tente novamente.')}finally{setPublishing(false)}
+  }catch{if(uploadedPath)await supabase.storage.from('market').remove([uploadedPath]);setMessage('Não foi possível publicar o anúncio. Revise os dados e tente novamente.')}finally{setPublishing(false)}
  }
  async function status(id:string,value:string){const {error}=await supabase.from('market_items').update({status:value,updated_at:new Date().toISOString()}).eq('id',id);if(error){setMessage('Não foi possível alterar o status do anúncio.');return}await load()}
- async function remove(id:string){if(!confirm('Excluir este anúncio?'))return;const {error}=await supabase.from('market_items').delete().eq('id',id);if(error){setMessage('Não foi possível excluir o anúncio.');return}await load()}
+ function storagePath(url:string){const marker='/storage/v1/object/public/market/';const index=url.indexOf(marker);if(index<0)return null;try{return decodeURIComponent(url.slice(index+marker.length))}catch{return null}}
+ async function remove(id:string){if(!confirm('Excluir este anúncio?'))return;const item=rows.find(row=>row.id===id);const {error}=await supabase.from('market_items').delete().eq('id',id);if(error){setMessage('Não foi possível excluir o anúncio.');return}const paths=(item?.image_urls||[]).map(storagePath).filter((path):path is string=>Boolean(path));if(paths.length)await supabase.storage.from('market').remove(paths);await load()}
 
  const min=minPrice.trim()?Number(minPrice.replace(',','.')):null;const max=maxPrice.trim()?Number(maxPrice.replace(',','.')):null;
  const visible=rows.filter(item=>{const q=search.trim().toLowerCase();const categoryOk=categoryFilter==='Todos'||item.category===categoryFilter;const statusOk=statusFilter==='Todos'||item.status===statusFilter;const minOk=min===null||!Number.isFinite(min)||Number(item.price)>=min;const maxOk=max===null||!Number.isFinite(max)||Number(item.price)<=max;const textOk=!q||item.title.toLowerCase().includes(q)||(item.description||'').toLowerCase().includes(q)||(item.city||'').toLowerCase().includes(q);return categoryOk&&statusOk&&minOk&&maxOk&&textOk});
