@@ -101,6 +101,23 @@ html.light .text-slate-700 { color: #334155 !important; }
 html.light .text-slate-800,
 html.light .text-slate-900 { color: #172033 !important; }
 
+/* No fundo claro o laranja original #ff7a16 perde contraste. Mantemos a
+   identidade laranja do GeekoPlay, mas usamos um tom mais profundo para texto,
+   ícones, bordas e ações ativas. */
+html.light .text-geek-orange,
+html.light .text-orange-300,
+html.light .text-orange-400,
+html.light .text-orange-500,
+html.light .text-orange-600 { color: #a83f08 !important; }
+html.light .border-geek-orange,
+html.light .border-orange-300,
+html.light .border-orange-400,
+html.light .border-orange-500 { border-color: #a83f08 !important; }
+html.light .bg-geek-orange { background-color: #a83f08 !important; color: #ffffff !important; }
+html.light .bg-orange-500 { background-color: #a83f08 !important; color: #ffffff !important; }
+html.light .hover\:text-orange-300:hover,
+html.light .hover\:text-orange-400:hover { color: #843106 !important; }
+
 html.light [class*="bg-[#0d1015]"] { background-color: rgba(255,255,255,.97) !important; }
 html.light [class*="bg-[#171b22]"] { background-color: #ffffff !important; }
 html.light input,
