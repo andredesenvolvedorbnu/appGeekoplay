@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect,useMemo,useRef,useState } from 'react';
-import { Image as ImageIcon, Loader2, Plus, Search, Store, Trash2, X } from 'lucide-react';
+import { useEffect,useMemo,useState } from 'react';
+import { Loader2, Plus, Search, Store, Trash2, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { PhotoSourcePicker } from '@/components/photo-source-picker';
 
 type Item={id:string;seller_id:string;title:string;description:string|null;image_urls:string[];price:number;category:string|null;item_condition:string|null;city:string|null;state:string|null;whatsapp:string|null;instagram:string|null;status:string;created_at:string};
 type MarketForm={title:string;description:string;price:string;category:string;item_condition:string;city:string;state:string;whatsapp:string;instagram:string};
@@ -37,7 +38,7 @@ async function cropMarketImage(file:File,zoom:number,x:number,y:number){
 }
 
 export function MarketClient(){
- const supabase=useMemo(()=>createClient(),[]);const fileRef=useRef<HTMLInputElement>(null);
+ const supabase=useMemo(()=>createClient(),[]);
  const [rows,setRows]=useState<Item[]>([]);const [userId,setUserId]=useState<string|null>(null);const [loading,setLoading]=useState(true);
  const [search,setSearch]=useState('');const [categoryFilter,setCategoryFilter]=useState('Todos');const [statusFilter,setStatusFilter]=useState('Todos');const [minPrice,setMinPrice]=useState('');const [maxPrice,setMaxPrice]=useState('');
  const [showForm,setShowForm]=useState(false);const [file,setFile]=useState<File|null>(null);const [preview,setPreview]=useState<string|null>(null);const [message,setMessage]=useState('');const [photoWarning,setPhotoWarning]=useState('');const [form,setForm]=useState<MarketForm>(initialForm);const [zoom,setZoom]=useState(1);const [offsetX,setOffsetX]=useState(0);const [offsetY,setOffsetY]=useState(0);const [publishing,setPublishing]=useState(false);
@@ -47,9 +48,9 @@ export function MarketClient(){
  useEffect(()=>{void load()},[supabase]);
  useEffect(()=>()=>{if(preview)URL.revokeObjectURL(preview)},[preview]);
 
- function clearPhoto(){if(preview)URL.revokeObjectURL(preview);setFile(null);setPreview(null);setPhotoWarning('');setZoom(1);setOffsetX(0);setOffsetY(0);if(fileRef.current)fileRef.current.value=''}
+ function clearPhoto(){if(preview)URL.revokeObjectURL(preview);setFile(null);setPreview(null);setPhotoWarning('');setZoom(1);setOffsetX(0);setOffsetY(0)}
  async function chooseFile(next:File|null){
-  setMessage('');setPhotoWarning('');if(!next){clearPhoto();return}
+  setMessage('');setPhotoWarning('');if(!next)return;
   if(!allowed.includes(next.type)){setMessage('A foto precisa estar em JPG, PNG ou WEBP.');return}
   if(next.size>MAX_FILE){setMessage('A foto ultrapassa 8 MB. Escolha uma imagem menor para continuar.');return}
   try{
@@ -83,8 +84,7 @@ export function MarketClient(){
   <div className="mb-5 flex flex-wrap items-end gap-3"><div><h1 className="text-2xl font-black">Mercado Geek</h1><p className="mt-1 text-sm text-slate-400">Itens usados, colecionáveis e oportunidades da comunidade.</p></div><button onClick={()=>setShowForm(value=>!value)} className="ml-auto flex items-center gap-2 rounded-xl bg-geek-orange px-4 py-2 text-sm font-bold"><Plus size={17}/>Anunciar item</button></div>
 
   {showForm&&<section className="mb-5 rounded-2xl border border-geek-line bg-geek-panel p-4"><div className="grid gap-3 sm:grid-cols-2"><input value={form.title} onChange={e=>set('title',e.target.value)} maxLength={100} placeholder="Título do item" className="rounded-xl border border-geek-line bg-geek-soft p-3"/><input inputMode="decimal" value={form.price} onChange={e=>set('price',e.target.value)} placeholder="Preço (ex.: 150,00)" className="rounded-xl border border-geek-line bg-geek-soft p-3"/><select value={form.category} onChange={e=>set('category',e.target.value)} className="rounded-xl border border-geek-line bg-geek-soft p-3">{categories.map(category=><option key={category}>{category}</option>)}</select><select value={form.item_condition} onChange={e=>set('item_condition',e.target.value)} className="rounded-xl border border-geek-line bg-geek-soft p-3"><option>Novo</option><option>Seminovo</option><option>Usado - ótimo estado</option><option>Usado - bom estado</option><option>Usado - com marcas</option></select><input value={form.city} onChange={e=>set('city',e.target.value)} placeholder="Cidade" className="rounded-xl border border-geek-line bg-geek-soft p-3"/><input value={form.state} onChange={e=>set('state',e.target.value.toUpperCase().slice(0,2))} maxLength={2} placeholder="UF" className="rounded-xl border border-geek-line bg-geek-soft p-3"/><input value={form.whatsapp} onChange={e=>set('whatsapp',e.target.value)} placeholder="WhatsApp com DDI/DDD" className="rounded-xl border border-geek-line bg-geek-soft p-3"/><input value={form.instagram} onChange={e=>set('instagram',e.target.value)} placeholder="Instagram" className="rounded-xl border border-geek-line bg-geek-soft p-3"/><textarea value={form.description} onChange={e=>set('description',e.target.value)} maxLength={1500} placeholder="Descrição" className="min-h-24 rounded-xl border border-geek-line bg-geek-soft p-3 sm:col-span-2"/></div>
-   <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>void chooseFile(e.target.files?.[0]||null)}/>
-   <div className="mt-4 flex flex-wrap items-center gap-2"><button onClick={()=>fileRef.current?.click()} className="flex items-center gap-2 rounded-xl border border-geek-line px-3 py-2 text-sm"><ImageIcon size={17}/>{file?'Trocar foto':'Adicionar foto'}</button><span className="text-xs text-slate-500">Recomendado: 4:3 · máximo 8 MB</span></div>
+   <div className="mt-4 flex flex-wrap items-center gap-2"><PhotoSourcePicker onSelect={chooseFile} cameraFacing="environment" label={file?'Trocar foto':'Adicionar foto'} className="rounded-xl border border-geek-line px-3 py-2 text-sm font-bold"/><span className="text-xs text-slate-500">Recomendado: 4:3 · máximo 8 MB</span></div>
    {photoWarning&&<div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-5 text-amber-200">{photoWarning}</div>}
    {preview&&<div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,460px)_1fr]"><div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-2xl border border-geek-line bg-black/30"><img src={preview} alt="Prévia do item" draggable={false} className="absolute inset-0 h-full w-full select-none object-cover object-center" style={{transform:`translate(${offsetX*.18}%,${offsetY*.18}%) scale(${zoom})`,transformOrigin:'center'}}/><button onClick={clearPhoto} className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white" aria-label="Remover foto"><X size={16}/></button></div><div className="grid content-center gap-3"><label className="grid gap-1 text-xs">Zoom<input type="range" min="1" max="3" step="0.05" value={zoom} onChange={e=>setZoom(Number(e.target.value))}/></label><label className="grid gap-1 text-xs">Mover para os lados<input type="range" min="-50" max="50" value={offsetX} onChange={e=>setOffsetX(Number(e.target.value))}/></label><label className="grid gap-1 text-xs">Mover para cima/baixo<input type="range" min="-50" max="50" value={offsetY} onChange={e=>setOffsetY(Number(e.target.value))}/></label><p className="text-xs leading-5 text-slate-500">A foto final será gerada em 1200 × 900 px. O sistema recorta a área escolhida sem esticar ou achatar a imagem.</p></div></div>}
    {message&&<p className="mt-3 text-sm text-red-400">{message}</p>}<button onClick={create} disabled={publishing} className="mt-4 rounded-xl bg-geek-orange px-5 py-3 font-bold disabled:opacity-50">{publishing?'Publicando...':'Publicar anúncio'}</button>
