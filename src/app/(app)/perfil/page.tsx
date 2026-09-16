@@ -1,12 +1,14 @@
 import { LogoutButton } from '@/components/logout-button';
 import { PinnedRecapCard } from '@/components/pinned-recap-card';
 import { ProfileClient } from '@/components/profile-client';
+import { ProfileLinks } from '@/components/profile-links';
 import { ProfileTabs } from '@/components/profile-tabs';
 import { XPProgressCard } from '@/components/xp-progress-card';
 
 export default function Page(){
   return <>
     <ProfileClient/>
+    <ProfileLinks editable/>
     <XPProgressCard/>
     <PinnedRecapCard/>
     <ProfileTabs/>
