@@ -10,7 +10,7 @@ import { PhotoSourcePicker } from '@/components/photo-source-picker';
 type Community={id:string;owner_id:string;name:string;slug:string;description:string|null;category:string|null;cover_url:string|null;visibility:string;created_at:string};
 type MemberRow={community_id:string;user_id:string};
 type MemberProfile={id:string;display_name:string;username:string|null;avatar_url:string|null;level:number;xp:number};
-const CATEGORIES=['Games','Anime','HQs & Comics','Filmes','Séries','Cosplay','Mangá','K-Pop','RPG','Tecnologia','Colecionáveis'];
+const CATEGORIES=['Eventos & Convenções','Games','Anime','HQs & Comics','Filmes','Séries','Cosplay','Mangá','K-Pop','RPG','Tecnologia','Colecionáveis'];
 const IMAGE_TYPES=['image/jpeg','image/png','image/webp'];
 const MAX_COVER=10*1024*1024;
 

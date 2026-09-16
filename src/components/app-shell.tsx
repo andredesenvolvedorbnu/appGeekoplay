@@ -12,6 +12,8 @@ const main = [
   ['Explorar', '/explorar', Compass],
   ['Eventos', '/eventos', CalendarDays],
   ['Comunidades', '/comunidades', Users],
+  ['Party Finder', '/party-finder', Gamepad2],
+  ['Cosplay', '/cosplay', Sparkles],
   ['Meu Geek Card', '/meu-card', IdCard],
   ['Conquistas', '/conquistas', Award],
   ['Meu Recap Geek', '/recap', Sparkles],
