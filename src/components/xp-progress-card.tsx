@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Award, Trophy } from 'lucide-react';
+import { Trophy, Zap } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 const TITLES=['Novato','Curioso Geek','Explorador','Player 1','Veterano','Especialista','Mestre Geek','Lenda','Ícone Geek','Deus Geek'];
@@ -37,7 +37,7 @@ export function XPProgressCard(){
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-yellow-500/10 text-yellow-300"><Trophy size={23}/></div>
         <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-x-3 gap-y-1"><h2 className="font-black">Nível {level} · {TITLES[level-1]}</h2><span className="text-xs text-slate-500">{profile.xp} XP total</span></div><div className="mt-3 h-2.5 overflow-hidden rounded-full bg-geek-soft"><div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-yellow-400 transition-all duration-500" style={{width:`${percent}%`}}/></div><div className="mt-1 flex justify-between text-[11px] text-slate-500"><span>{level>=10?'Nível máximo':`${current} / 500 XP neste nível`}</span><span>{level>=10?'Deus Geek':`${Math.max(0,end-profile.xp)} XP para o próximo`}</span></div></div>
-        <Link href="/conquistas" className="inline-flex items-center justify-center gap-2 rounded-xl border border-geek-line bg-geek-soft px-3 py-2 text-sm font-semibold"><Award size={16}/>Conquistas</Link>
+        <Link href="/conquistas#como-ganhar-xp" className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-sm font-semibold text-orange-300 hover:border-orange-500/50"><Zap size={16}/>Como ganhar XP</Link>
       </div>
     </div>
   </section>;
