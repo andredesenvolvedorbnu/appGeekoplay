@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">GeekoPlay</title>
+  <desc id="desc">Ícone oficial do GeekoPlay</desc>
+  <rect width="512" height="512" rx="112" fill="#101319"/>
+  <circle cx="256" cy="256" r="178" fill="#ff7a1a"/>
+  <path d="M173 225c0-35 28-63 63-63h40c35 0 63 28 63 63v62c0 35-28 63-63 63h-40c-35 0-63-28-63-63v-62Z" fill="#101319"/>
+  <path d="M208 256h52M234 230v52" stroke="#fff" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="309" cy="239" r="13" fill="#fff"/>
+  <circle cx="337" cy="271" r="13" fill="#fff"/>
+  <path d="M199 343c18 20 37 30 57 30s39-10 57-30" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round"/>
+</svg>
