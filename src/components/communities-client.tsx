@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect,useMemo,useState } from 'react';
 import { Image as ImageIcon, Loader2, Plus, Search, Trophy, Users, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { ImageCropper } from '@/components/image-cropper';
 
 type Community={id:string;owner_id:string;name:string;slug:string;description:string|null;category:string|null;cover_url:string|null;visibility:string;created_at:string};
 type MemberRow={community_id:string;user_id:string};
@@ -31,9 +32,11 @@ export function CommunitiesClient(){
  const [creating,setCreating]=useState(false);
  const [coverFile,setCoverFile]=useState<File|null>(null);
  const [coverPreview,setCoverPreview]=useState<string|null>(null);
+ const [cropSource,setCropSource]=useState<File|null>(null);
 
- function resetCover(){if(coverPreview)URL.revokeObjectURL(coverPreview);setCoverFile(null);setCoverPreview(null)}
- function chooseCover(file:File|null){setMessage('');resetCover();if(!file)return;if(!IMAGE_TYPES.includes(file.type)){setMessage('A capa precisa ser JPG, PNG ou WEBP.');return}if(file.size>MAX_COVER){setMessage('A capa precisa ter no máximo 10 MB.');return}setCoverFile(file);setCoverPreview(URL.createObjectURL(file))}
+ function resetCover(){if(coverPreview)URL.revokeObjectURL(coverPreview);setCoverFile(null);setCoverPreview(null);setCropSource(null)}
+ function chooseCover(file:File|null){setMessage('');if(!file)return;if(!IMAGE_TYPES.includes(file.type)){setMessage('A capa precisa ser JPG, PNG ou WEBP.');return}if(file.size>MAX_COVER){setMessage('A capa precisa ter no máximo 10 MB.');return}setCropSource(file)}
+ function confirmCoverCrop(file:File,previewUrl:string){if(coverPreview)URL.revokeObjectURL(coverPreview);setCoverFile(file);setCoverPreview(previewUrl);setCropSource(null)}
 
  async function load(){
   setLoading(true);
@@ -73,9 +76,8 @@ export function CommunitiesClient(){
 
  async function uploadCover(){
   if(!coverFile||!userId)return null;
-  const ext=coverFile.name.split('.').pop()?.toLowerCase()||'jpg';
-  const path=`${userId}/${crypto.randomUUID()}.${ext}`;
-  const {error}=await supabase.storage.from('communities').upload(path,coverFile,{contentType:coverFile.type,cacheControl:'3600',upsert:false});
+  const path=`${userId}/${crypto.randomUUID()}.webp`;
+  const {error}=await supabase.storage.from('communities').upload(path,coverFile,{contentType:'image/webp',cacheControl:'3600',upsert:false});
   if(error)throw error;
   return supabase.storage.from('communities').getPublicUrl(path).data.publicUrl;
  }
@@ -96,6 +98,7 @@ export function CommunitiesClient(){
  const visible=rows.filter(r=>{if(tab==='minhas'&&!mine.has(r.id)&&r.owner_id!==userId)return false;const q=search.toLowerCase().trim();return !q||r.name.toLowerCase().includes(q)||(r.description||'').toLowerCase().includes(q)||(r.category||'').toLowerCase().includes(q)});
 
  return <div className="mx-auto max-w-5xl px-3 pb-8 sm:px-4">
+  {cropSource&&<ImageCropper file={cropSource} aspect={16/6} title="Ajustar capa da comunidade" outputWidth={1600} onCancel={()=>setCropSource(null)} onConfirm={confirmCoverCrop}/>} 
   <div className="mb-5 flex flex-wrap items-end gap-3"><div><h1 className="text-2xl font-black">Comunidades</h1><p className="mt-1 text-sm text-slate-400">Encontre fandoms e pessoas com os mesmos interesses.</p></div><button onClick={()=>setShowCreate(v=>!v)} className="ml-auto flex items-center gap-2 rounded-xl bg-geek-orange px-4 py-2 text-sm font-bold"><Plus size={17}/>Criar comunidade</button></div>
 
   {showCreate&&<section className="mb-4 rounded-2xl border border-geek-line bg-geek-panel p-4">
@@ -105,8 +108,8 @@ export function CommunitiesClient(){
     <textarea value={description} onChange={e=>setDescription(e.target.value)} maxLength={1000} placeholder="Descrição" className="min-h-24 rounded-xl border border-geek-line bg-geek-soft p-3 sm:col-span-2"/>
     <div className="sm:col-span-2">
      <label className="mb-2 block text-xs font-bold text-slate-400">Capa da comunidade</label>
-     <input id="community-cover" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e=>chooseCover(e.target.files?.[0]||null)}/>
-     {coverPreview?<div className="relative flex aspect-[16/6] w-full items-center justify-center overflow-hidden rounded-2xl border border-geek-line bg-black/25"><img src={coverPreview} alt="Prévia da capa" className="block h-auto max-h-full w-auto max-w-full object-contain object-center"/><button type="button" onClick={resetCover} className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white" aria-label="Remover capa"><X size={16}/></button></div>:<label htmlFor="community-cover" className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-geek-line bg-geek-soft p-6 text-sm text-slate-400 hover:border-orange-500/40"><ImageIcon size={18}/>Adicionar capa (JPG, PNG ou WEBP, até 10 MB)</label>}
+     <input id="community-cover" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={e=>{chooseCover(e.target.files?.[0]||null);e.currentTarget.value=''}}/>
+     {coverPreview?<div className="relative flex aspect-[16/6] w-full items-center justify-center overflow-hidden rounded-2xl border border-geek-line bg-black/25"><img src={coverPreview} alt="Prévia da capa" className="h-full w-full object-cover object-center"/><label htmlFor="community-cover" className="absolute bottom-2 left-2 cursor-pointer rounded-xl bg-black/70 px-3 py-2 text-xs font-bold text-white">Ajustar outra imagem</label><button type="button" onClick={resetCover} className="absolute right-2 top-2 rounded-full bg-black/70 p-2 text-white" aria-label="Remover capa"><X size={16}/></button></div>:<label htmlFor="community-cover" className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-geek-line bg-geek-soft p-6 text-sm text-slate-400 hover:border-orange-500/40"><ImageIcon size={22}/><span>Carregue uma capa</span><span className="text-[11px] text-slate-500">Você poderá recortar, dar zoom e reposicionar sem deformar a imagem.</span></label>}
     </div>
     <select value={visibility} onChange={e=>setVisibility(e.target.value)} className="rounded-xl border border-geek-line bg-geek-soft p-3"><option value="public">Aberta</option><option value="private">Fechada</option></select>
     <button onClick={create} disabled={creating} className="rounded-xl bg-geek-orange px-4 py-3 font-bold disabled:opacity-50">{creating?'Criando...':'Criar'}</button>
@@ -118,7 +121,7 @@ export function CommunitiesClient(){
   {loading?<div className="grid place-items-center py-20"><Loader2 className="animate-spin text-geek-orange"/></div>:visible.length===0?<div className="rounded-2xl border border-dashed border-geek-line bg-geek-panel p-10 text-center text-slate-400"><Users className="mx-auto mb-3 text-geek-orange"/>Nenhuma comunidade encontrada.</div>:<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{visible.map(c=>{
    const tops=topMembers[c.id]||[];
    return <article key={c.id} className="overflow-hidden rounded-2xl border border-geek-line bg-geek-panel">
-    <Link href={`/comunidades/${c.id}`} className="block"><div className="flex aspect-[16/6] items-center justify-center overflow-hidden bg-gradient-to-br from-orange-500/30 via-purple-500/20 to-cyan-500/10">{c.cover_url&&<img src={c.cover_url} alt={`Capa de ${c.name}`} className="block h-auto max-h-full w-auto max-w-full object-contain object-center"/>}</div></Link>
+    <Link href={`/comunidades/${c.id}`} className="block"><div className="flex aspect-[16/6] items-center justify-center overflow-hidden bg-gradient-to-br from-orange-500/30 via-purple-500/20 to-cyan-500/10">{c.cover_url?<img src={c.cover_url} alt={`Capa de ${c.name}`} className="block h-full w-full object-cover object-center"/>:<span className="flex flex-col items-center gap-2 text-xs text-slate-500"><ImageIcon size={18}/>Sem capa</span>}</div></Link>
     <div className="p-4"><div className="flex items-start gap-2"><div className="min-w-0 flex-1"><Link href={`/comunidades/${c.id}`} className="font-black hover:text-orange-300">{c.name}</Link><p className="text-xs text-slate-500">{c.category||'Geek'} · {c.visibility==='public'?'Aberta':'Fechada'}</p></div><span className="flex items-center gap-1 text-xs text-slate-400"><Users size={14}/>{members[c.id]||0}</span></div>
      {c.description&&<p className="mt-3 line-clamp-3 text-sm text-slate-400">{c.description}</p>}
      {tops.length>0&&<div className="mt-4 rounded-xl bg-geek-soft p-3"><div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-500"><Trophy size={14} className="text-amber-400"/>Top membros</div><div className="space-y-2">{tops.map((member,index)=><div key={member.id} className="flex items-center gap-2"><div className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600">{member.avatar_url?<img src={member.avatar_url} alt="" className="h-full w-full object-cover object-center"/>:<span className="text-[10px] font-black">{index+1}</span>}</div><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold">{member.display_name}</p><p className="text-[10px] text-slate-500">Nível {member.level} · {member.xp} XP</p></div></div>)}</div></div>}
