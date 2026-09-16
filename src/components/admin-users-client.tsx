@@ -11,7 +11,7 @@ export function AdminUsersClient({initialUsers}:{initialUsers:AdminUser[]}){
  const [users,setUsers]=useState(initialUsers);
  const [busyId,setBusyId]=useState<string|null>(null);
  const [message,setMessage]=useState('');
- const protectedEmails=new Set(['andresantos.deco@gmail.com','contato.geekoplay@gmail.com']);
+ const protectedEmails=new Set(['andresantos.deco@gmail.com','andresantos.deco2022@gmail.com','ingressoblu@gmail.com','contato.geekoplay@gmail.com']);
 
  async function refresh(){
   const {data,error}=await supabase.rpc('admin_list_profiles');
