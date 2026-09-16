@@ -14,8 +14,8 @@ export function UpcomingEventsSidebar(){
   useEffect(()=>{(async()=>{
     const {data:{user}}=await supabase.auth.getUser();
     if(!user)return;
-    const {data:attendance}=await supabase.from('event_attendees').select('event_id').eq('user_id',user.id).eq('status','going');
-    const ids=(attendance||[]).map(a=>a.event_id);
+    const {data:attendance}=await supabase.from('event_attendees').select('event_id,status').eq('user_id',user.id).in('status',['going','confirmed']);
+    const ids=[...new Set((attendance||[]).map(a=>a.event_id))];
     if(!ids.length){setEvents([]);return}
     const {data}=await supabase.from('events').select('id,title,cover_url,starts_at,city,state').in('id',ids).gte('starts_at',new Date().toISOString()).order('starts_at',{ascending:true}).limit(3);
     setEvents((data||[]) as Event[]);
