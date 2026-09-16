@@ -59,6 +59,24 @@ section > div.group.relative > button {
   pointer-events: none;
 }
 
+/* Perfil: apenas o avatar invade a capa. Nome, @, nível e ações ficam sempre
+   sobre o painel grafite para manter contraste mesmo com capas muito claras. */
+section > div.group.relative + div.relative > div:first-child {
+  margin-top: 0 !important;
+  padding-top: .75rem;
+}
+section > div.group.relative + div.relative > div:first-child > div:first-child {
+  margin-top: -3.75rem;
+}
+
+/* O mesmo princípio vale ao visualizar o perfil público de outro geek. */
+section > div[class*="aspect-[3/1]"] + div.relative {
+  margin-top: 0 !important;
+}
+section > div[class*="aspect-[3/1]"] + div.relative > div:first-child > div:first-child {
+  margin-top: -3.5rem;
+}
+
 @keyframes geekoplayKenBurns {
   0% { transform: scale(1); }
   100% { transform: scale(1.055); }
