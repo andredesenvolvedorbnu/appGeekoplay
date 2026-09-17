@@ -90,16 +90,16 @@ html.light .bg-geek-soft { background-color: #edf1f6 !important; }
 html.light .border-geek-line { border-color: #cbd5e1 !important; }
 
 /* Contraste do tema claro: como a fonte de corpo é ExtraLight, os tons
-   secundários precisam ser mais escuros do que no tema dark para manter leitura. */
+   secundários precisam ser bem mais escuros do que no tema dark para manter leitura. */
 html.light .text-slate-100,
-html.light .text-slate-200 { color: #172033 !important; }
-html.light .text-slate-300 { color: #283548 !important; }
-html.light .text-slate-400 { color: #3f4f63 !important; }
-html.light .text-slate-500 { color: #526174 !important; }
+html.light .text-slate-200 { color: #111827 !important; }
+html.light .text-slate-300 { color: #1f2937 !important; }
+html.light .text-slate-400 { color: #2f3e52 !important; }
+html.light .text-slate-500 { color: #3f4f63 !important; }
 html.light .text-slate-600 { color: #475569 !important; }
 html.light .text-slate-700 { color: #334155 !important; }
 html.light .text-slate-800,
-html.light .text-slate-900 { color: #172033 !important; }
+html.light .text-slate-900 { color: #111827 !important; }
 
 /* No fundo claro o laranja original #ff7a16 perde contraste. Mantemos a
    identidade laranja do GeekoPlay, mas usamos um tom mais profundo para texto,
@@ -123,15 +123,17 @@ html.light [class*="bg-[#171b22]"] { background-color: #ffffff !important; }
 html.light input,
 html.light textarea,
 html.light select { color: #172033; }
-html.light ::placeholder { color: #5f6f82; opacity: 1; }
+html.light ::placeholder { color: #526174; opacity: 1; }
 html.light input:disabled,
 html.light textarea:disabled,
-html.light select:disabled { color: #475569; opacity: .85; }
+html.light select:disabled { color: #3f4f63; opacity: .95; }
 
 /* Elementos que usam cinza por estilo visual não podem perder legibilidade no claro. */
-html.light .text-slate-400\/80 { color: #475569 !important; }
-html.light .text-slate-500\/80 { color: #526174 !important; }
-html.light .opacity-60 { opacity: .75; }
+html.light .text-slate-400\/80 { color: #334155 !important; }
+html.light .text-slate-500\/80 { color: #3f4f63 !important; }
+html.light .opacity-50 { opacity: .78; }
+html.light .opacity-60 { opacity: .9; }
+html.light .opacity-70 { opacity: .94; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
