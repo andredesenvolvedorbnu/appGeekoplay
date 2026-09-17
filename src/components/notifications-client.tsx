@@ -9,7 +9,7 @@ type Notification={id:string;user_id:string;actor_id:string|null;type:string;tit
 type Profile={id:string;display_name:string;username:string|null;avatar_url:string|null};
 
 const filters=[['Todas','all'],['Curtidas','like'],['Comentários','comment'],['Seguidores','follow'],['Mensagens','message'],['Eventos','event'],['Comunidades','community']] as const;
-function isEventType(type:string){return type==='event'||type==='event_same'}
+function isEventType(type:string){return type==='event'||type==='event_same'||type==='event_friend_going'||type.startsWith('event_')}
 function isCommunityType(type:string){return type.startsWith('community_')}
 function iconFor(type:string){if(type==='like')return <Heart size={18}/>;if(type==='comment')return <MessageCircle size={18}/>;if(type==='follow')return <UserPlus size={18}/>;if(type==='message')return <Mail size={18}/>;if(isEventType(type))return <CalendarDays size={18}/>;if(isCommunityType(type))return <Users size={18}/>;return <Bell size={18}/>}
 function relativeTime(value:string){const diff=Math.max(0,Date.now()-new Date(value).getTime());const min=Math.floor(diff/60000);if(min<1)return'agora';if(min<60)return`há ${min} min`;const h=Math.floor(min/60);if(h<24)return`há ${h} h`;const d=Math.floor(h/24);if(d<7)return`há ${d} d`;return new Date(value).toLocaleDateString('pt-BR')}
