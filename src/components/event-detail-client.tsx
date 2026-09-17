@@ -67,9 +67,11 @@ export function EventDetailClient({eventId}:{eventId:string}){
  if(loading)return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-geek-orange"/></div>;
  if(!event)return <div className="mx-auto max-w-3xl px-4 py-12 text-center"><h1 className="text-2xl font-black">Evento não encontrado</h1><p className="mt-2 text-sm text-slate-400">Este evento pode ter sido removido.</p><Link href="/eventos" className="mt-5 inline-flex rounded-xl bg-geek-orange px-4 py-2 font-bold">Voltar para Eventos</Link></div>;
 
- const ended=new Date(event.ends_at||event.starts_at).getTime()<Date.now();
+ const defaultEnd=new Date(event.starts_at).getTime()+24*60*60*1000;
+ const eventEnd=new Date(event.ends_at||new Date(defaultEnd)).getTime();
+ const ended=eventEnd<Date.now();
  const checkinOpens=new Date(event.starts_at).getTime()-6*60*60*1000;
- const checkinCloses=new Date(event.ends_at||new Date(new Date(event.starts_at).getTime()+24*60*60*1000)).getTime()+6*60*60*1000;
+ const checkinCloses=eventEnd+6*60*60*1000;
  const checkinOpen=Date.now()>=checkinOpens&&Date.now()<=checkinCloses;
  const checkedIn=userId?checkedInIds.has(userId):false;
  const checkedInPeople=attendees.filter(person=>checkedInIds.has(person.id));
