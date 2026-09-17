@@ -90,19 +90,37 @@ section > div[class*="aspect-[3/1]"] + div.relative > div:first-child > div:firs
 }
 
 html.light { color-scheme: light; }
-html.light body { background: #f5f7fb; color: #111827; }
+html.light body { background: #f5f7fb; color: #111827; font-weight: 300; }
+html.light p,
+html.light span,
+html.light a,
+html.light li,
+html.light td,
+html.light th,
+html.light input,
+html.light textarea,
+html.light select { font-weight: 300; }
+html.light .font-medium,
+html.light .font-semibold,
+html.light .font-bold,
+html.light .font-extrabold,
+html.light .font-black,
+html.light b,
+html.light strong,
+html.light button,
+html.light label { font-weight: 600 !important; }
 html.light .bg-geek-bg { background-color: #f5f7fb !important; }
 html.light .bg-geek-panel { background-color: #ffffff !important; }
 html.light .bg-geek-soft { background-color: #edf1f6 !important; }
 html.light .border-geek-line { border-color: #cbd5e1 !important; }
 
-/* No tema claro a fonte ExtraLight precisa de contraste alto para não parecer
+/* No tema claro a fonte fina precisa de contraste alto para não parecer
    apagada sobre branco. Textos secundários continuam hierárquicos, mas legíveis. */
 html.light .text-slate-100,
 html.light .text-slate-200,
 html.light .text-slate-300 { color: #111827 !important; }
 html.light .text-slate-400 { color: #1f2937 !important; }
-html.light .text-slate-500 { color: #334155 !important; }
+html.light .text-slate-500,
 html.light .text-slate-600 { color: #334155 !important; }
 html.light .text-slate-700 { color: #1f2937 !important; }
 html.light .text-slate-800,
