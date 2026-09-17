@@ -90,21 +90,21 @@ section > div[class*="aspect-[3/1]"] + div.relative > div:first-child > div:firs
 }
 
 html.light { color-scheme: light; }
-html.light body { background: #f5f7fb; color: #172033; }
+html.light body { background: #f5f7fb; color: #111827; }
 html.light .bg-geek-bg { background-color: #f5f7fb !important; }
 html.light .bg-geek-panel { background-color: #ffffff !important; }
 html.light .bg-geek-soft { background-color: #edf1f6 !important; }
 html.light .border-geek-line { border-color: #cbd5e1 !important; }
 
-/* Contraste do tema claro: como a fonte de corpo é ExtraLight, os tons
-   secundários precisam ser bem mais escuros do que no tema dark para manter leitura. */
+/* No tema claro a fonte ExtraLight precisa de contraste alto para não parecer
+   apagada sobre branco. Textos secundários continuam hierárquicos, mas legíveis. */
 html.light .text-slate-100,
-html.light .text-slate-200 { color: #111827 !important; }
-html.light .text-slate-300 { color: #1f2937 !important; }
-html.light .text-slate-400 { color: #2f3e52 !important; }
-html.light .text-slate-500 { color: #3f4f63 !important; }
-html.light .text-slate-600 { color: #475569 !important; }
-html.light .text-slate-700 { color: #334155 !important; }
+html.light .text-slate-200,
+html.light .text-slate-300 { color: #111827 !important; }
+html.light .text-slate-400 { color: #1f2937 !important; }
+html.light .text-slate-500 { color: #334155 !important; }
+html.light .text-slate-600 { color: #334155 !important; }
+html.light .text-slate-700 { color: #1f2937 !important; }
 html.light .text-slate-800,
 html.light .text-slate-900 { color: #111827 !important; }
 
@@ -129,18 +129,18 @@ html.light [class*="bg-[#0d1015]"] { background-color: rgba(255,255,255,.97) !im
 html.light [class*="bg-[#171b22]"] { background-color: #ffffff !important; }
 html.light input,
 html.light textarea,
-html.light select { color: #172033; }
-html.light ::placeholder { color: #526174; opacity: 1; }
+html.light select { color: #111827; }
+html.light ::placeholder { color: #475569; opacity: 1; }
 html.light input:disabled,
 html.light textarea:disabled,
-html.light select:disabled { color: #3f4f63; opacity: .95; }
+html.light select:disabled { color: #334155; opacity: 1; }
 
-/* Elementos que usam cinza por estilo visual não podem perder legibilidade no claro. */
-html.light .text-slate-400\/80 { color: #334155 !important; }
-html.light .text-slate-500\/80 { color: #3f4f63 !important; }
-html.light .opacity-50 { opacity: .78; }
-html.light .opacity-60 { opacity: .9; }
-html.light .opacity-70 { opacity: .94; }
+/* Elementos com opacidade também precisam continuar legíveis no claro. */
+html.light .text-slate-400\/80 { color: #1f2937 !important; }
+html.light .text-slate-500\/80 { color: #334155 !important; }
+html.light .opacity-50 { opacity: .9; }
+html.light .opacity-60 { opacity: .94; }
+html.light .opacity-70 { opacity: .97; }
 
 /* Geek Cards mantêm fundo escuro também no tema claro. Portanto, o conteúdo
    interno precisa preservar contraste claro em vez de herdar os overrides acima. */
