@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       supabase.from('profiles').select('display_name,bio,avatar_url,favorite_categories,role,is_pro').eq('id', user.id).single(),
       supabase.from('notifications').select('*',{count:'exact',head:true}).eq('user_id',user.id).eq('is_read',false),
       supabase.from('messages').select('*',{count:'exact',head:true}).eq('recipient_id',user.id).is('read_at',null),
-      supabase.from('event_attendees').select('event_id').eq('user_id',user.id).eq('status','going')
+      supabase.from('event_attendees').select('event_id').eq('user_id',user.id).in('status',['going','confirmed'])
     ]);
     if (data) setProfile(data as ShellProfile);
     setUnreadCount(notificationCount||0);
