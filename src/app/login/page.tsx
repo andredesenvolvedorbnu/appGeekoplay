@@ -16,7 +16,15 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const confirmationError = params.get('erro') === 'confirmacao';
     const oauthError = params.get('error_description') || params.get('error');
+
+    if (confirmationError) {
+      setError('Não foi possível confirmar seu e-mail. O link pode ter expirado ou já ter sido utilizado. Solicite um novo cadastro ou tente entrar novamente.');
+      window.history.replaceState({}, '', '/login');
+      return;
+    }
+
     if (!oauthError) return;
 
     const decoded = decodeURIComponent(oauthError.replace(/\+/g, ' '));
