@@ -89,8 +89,12 @@ section > div[class*="aspect-[3/1]"] + div.relative > div:first-child > div:firs
   100% { transform: scale(1.055); }
 }
 
+/* REGRA APROVADA DO TEMA CLARO:
+   - o tema escuro acima não é alterado;
+   - em superfícies brancas/claras, texto base usa Pimenta-preta ~ #585858;
+   - em superfícies escuras, pretas ou laranja, texto permanece branco. */
 html.light { color-scheme: light; }
-html.light body { background: #f5f7fb; color: #111827; font-weight: 300; }
+html.light body { background: #f5f7fb; color: #585858; font-weight: 300; }
 html.light p,
 html.light span,
 html.light a,
@@ -114,21 +118,20 @@ html.light .bg-geek-panel { background-color: #ffffff !important; }
 html.light .bg-geek-soft { background-color: #edf1f6 !important; }
 html.light .border-geek-line { border-color: #cbd5e1 !important; }
 
-/* No tema claro a fonte fina precisa de contraste alto para não parecer
-   apagada sobre branco. Textos secundários continuam hierárquicos, mas legíveis. */
+/* Texto neutro sobre superfícies claras segue o cinza aprovado. */
 html.light .text-slate-100,
 html.light .text-slate-200,
-html.light .text-slate-300 { color: #111827 !important; }
-html.light .text-slate-400 { color: #1f2937 !important; }
+html.light .text-slate-300,
+html.light .text-slate-400,
 html.light .text-slate-500,
-html.light .text-slate-600 { color: #334155 !important; }
-html.light .text-slate-700 { color: #1f2937 !important; }
+html.light .text-slate-600,
+html.light .text-slate-700,
 html.light .text-slate-800,
-html.light .text-slate-900 { color: #111827 !important; }
+html.light .text-slate-900,
+html.light .text-slate-400\/80,
+html.light .text-slate-500\/80 { color: #585858 !important; }
 
-/* No fundo claro o laranja original #ff7a16 perde contraste. Mantemos a
-   identidade laranja do GeekoPlay, mas usamos um tom mais profundo para texto,
-   ícones, bordas e ações ativas. */
+/* Identidade laranja em texto/borda sobre fundo claro continua visível. */
 html.light .text-geek-orange,
 html.light .text-orange-300,
 html.light .text-orange-400,
@@ -138,37 +141,58 @@ html.light .border-geek-orange,
 html.light .border-orange-300,
 html.light .border-orange-400,
 html.light .border-orange-500 { border-color: #a83f08 !important; }
-html.light .bg-geek-orange { background-color: #a83f08 !important; color: #ffffff !important; }
-html.light .bg-orange-500 { background-color: #a83f08 !important; color: #ffffff !important; }
 html.light .hover\:text-orange-300:hover,
 html.light .hover\:text-orange-400:hover { color: #843106 !important; }
 
-html.light [class*="bg-[#0d1015]"] { background-color: rgba(255,255,255,.97) !important; }
-html.light [class*="bg-[#171b22]"] { background-color: #ffffff !important; }
 html.light input,
 html.light textarea,
-html.light select { color: #111827; }
-html.light ::placeholder { color: #475569; opacity: 1; }
+html.light select { color: #585858; }
+html.light ::placeholder { color: #585858; opacity: 1; }
 html.light input:disabled,
 html.light textarea:disabled,
-html.light select:disabled { color: #334155; opacity: 1; }
+html.light select:disabled { color: #585858; opacity: 1; }
 
-/* Elementos com opacidade também precisam continuar legíveis no claro. */
-html.light .text-slate-400\/80 { color: #1f2937 !important; }
-html.light .text-slate-500\/80 { color: #334155 !important; }
+/* Botões e superfícies laranja: sempre texto branco. */
+html.light .bg-geek-orange,
+html.light .bg-orange-500 { background-color: #a83f08 !important; color: #ffffff !important; }
+html.light .bg-geek-orange *,
+html.light .bg-orange-500 * { color: #ffffff !important; }
+
+/* Superfícies escuras/pretas mantidas no modo claro precisam de texto branco. */
+html.light [class*="bg-black"],
+html.light [class*="bg-[#101218]"],
+html.light [class*="bg-[#151820]"],
+html.light [class*="from-[#28202f]"] { color: #ffffff !important; }
+html.light [class*="bg-black"] .text-slate-100,
+html.light [class*="bg-black"] .text-slate-200,
+html.light [class*="bg-black"] .text-slate-300,
+html.light [class*="bg-black"] .text-slate-400,
+html.light [class*="bg-black"] .text-slate-500,
+html.light [class*="bg-[#101218]"] .text-slate-100,
+html.light [class*="bg-[#101218]"] .text-slate-200,
+html.light [class*="bg-[#101218]"] .text-slate-300,
+html.light [class*="bg-[#101218]"] .text-slate-400,
+html.light [class*="bg-[#101218]"] .text-slate-500,
+html.light [class*="bg-[#151820]"] .text-slate-100,
+html.light [class*="bg-[#151820]"] .text-slate-200,
+html.light [class*="bg-[#151820]"] .text-slate-300,
+html.light [class*="bg-[#151820]"] .text-slate-400,
+html.light [class*="bg-[#151820]"] .text-slate-500,
+html.light [class*="from-[#28202f]"] .text-slate-100,
+html.light [class*="from-[#28202f]"] .text-slate-200,
+html.light [class*="from-[#28202f]"] .text-slate-300,
+html.light [class*="from-[#28202f]"] .text-slate-400,
+html.light [class*="from-[#28202f]"] .text-slate-500 { color: #ffffff !important; }
+html.light [class*="from-[#28202f]"] .text-orange-300 { color: #ffffff !important; }
+
+/* Painéis que já eram convertidos para branco no tema claro continuam claros. */
+html.light [class*="bg-[#0d1015]"] { background-color: rgba(255,255,255,.97) !important; }
+html.light [class*="bg-[#171b22]"] { background-color: #ffffff !important; }
+
+/* Opacidade não deve lavar o cinza aprovado. */
 html.light .opacity-50 { opacity: .9; }
 html.light .opacity-60 { opacity: .94; }
 html.light .opacity-70 { opacity: .97; }
-
-/* Geek Cards mantêm fundo escuro também no tema claro. Portanto, o conteúdo
-   interno precisa preservar contraste claro em vez de herdar os overrides acima. */
-html.light [class*="from-[#28202f]"] {
-  color: #f8fafc !important;
-}
-html.light [class*="from-[#28202f]"] .text-slate-300 { color: #cbd5e1 !important; }
-html.light [class*="from-[#28202f]"] .text-slate-400 { color: #94a3b8 !important; }
-html.light [class*="from-[#28202f]"] .text-slate-500 { color: #7f8da3 !important; }
-html.light [class*="from-[#28202f]"] .text-orange-300 { color: #fdba74 !important; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
