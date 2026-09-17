@@ -162,7 +162,8 @@ html.light .bg-orange-500 * { color: #ffffff !important; }
 html.light [class*="bg-black"],
 html.light [class*="bg-[#101218]"],
 html.light [class*="bg-[#151820]"],
-html.light [class*="from-[#28202f]"] { color: #ffffff !important; }
+html.light [class*="from-[#28202f]"],
+html.light [class*="from-[#27202f]"] { color: #ffffff !important; }
 html.light [class*="bg-black"] .text-slate-100,
 html.light [class*="bg-black"] .text-slate-200,
 html.light [class*="bg-black"] .text-slate-300,
@@ -182,8 +183,17 @@ html.light [class*="from-[#28202f]"] .text-slate-100,
 html.light [class*="from-[#28202f]"] .text-slate-200,
 html.light [class*="from-[#28202f]"] .text-slate-300,
 html.light [class*="from-[#28202f]"] .text-slate-400,
-html.light [class*="from-[#28202f]"] .text-slate-500 { color: #ffffff !important; }
-html.light [class*="from-[#28202f]"] .text-orange-300 { color: #ffffff !important; }
+html.light [class*="from-[#28202f]"] .text-slate-500,
+html.light [class*="from-[#27202f]"] .text-slate-100,
+html.light [class*="from-[#27202f]"] .text-slate-200,
+html.light [class*="from-[#27202f]"] .text-slate-300,
+html.light [class*="from-[#27202f]"] .text-slate-400,
+html.light [class*="from-[#27202f]"] .text-slate-500 { color: #e5e7eb !important; }
+html.light [class*="from-[#28202f]"] .text-orange-300,
+html.light [class*="from-[#27202f]"] .text-orange-300 { color: #fdba74 !important; }
+html.light [class*="from-[#27202f]"] .text-orange-100 { color: #ffedd5 !important; }
+html.light [class*="from-[#27202f]"] .text-red-300 { color: #fca5a5 !important; }
+html.light [class*="from-[#27202f]"] .text-cyan-300 { color: #67e8f9 !important; }
 
 /* Painéis que já eram convertidos para branco no tema claro continuam claros. */
 html.light [class*="bg-[#0d1015]"] { background-color: rgba(255,255,255,.97) !important; }
