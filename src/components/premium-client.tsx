@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect,useMemo,useState } from 'react';
-import { AlertTriangle, CalendarDays, Check, Crown, ExternalLink, Info, Loader2, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Check, Crown, CreditCard, Info, Loader2, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 type Settings={premium_payment_url:string|null;pro_hides_ads:boolean};
@@ -47,7 +47,6 @@ export function PremiumClient(){
 
  const selected=plans.find(plan=>plan.id===selectedId)||plans[0]||null;
  const pendingPlan=plans.find(plan=>plan.id===request?.plan_id)||null;
- const paymentUrl=pendingPlan?.payment_url||settings?.premium_payment_url||null;
  const activeUntil=profile.pro_expires_at||request?.expires_at;
  const remainingDays=daysUntil(activeUntil||null);
  const renewalOpen=profile.is_pro&&remainingDays!==null&&remainingDays<=30;
@@ -67,12 +66,25 @@ export function PremiumClient(){
   return {amount,percent,monthly:Number(plan.price)/months};
  }
 
+ async function startCheckout(requestId:string){
+  setWorking(true);setMessage('');
+  try{
+    const response=await fetch('/api/payments/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'premium',requestId})});
+    const data=await response.json();
+    if(!response.ok||!data.checkoutUrl){setMessage(data.error||'Não foi possível abrir o pagamento.');return false}
+    window.location.href=data.checkoutUrl;
+    return true;
+  }catch{setMessage('Não foi possível conectar ao Mercado Pago. Tente novamente.');return false}
+  finally{setWorking(false)}
+ }
  async function requestPremium(){
   if(!selected){setMessage('Nenhum plano PRO está disponível no momento.');return}
   setWorking(true);setMessage('');
-  const {error}=await supabase.rpc('request_premium',{selected_plan:selected.id});
-  if(error){setMessage(error.message.includes('PENDING')?'Você já possui uma solicitação Premium em análise.':error.message.includes('RENEWAL_NOT_OPEN')?'A renovação antecipada abre quando faltarem 30 dias para o vencimento.':error.message.includes('PLAN_NOT_FOUND')?'Este plano não está mais disponível. Escolha outro.':'Não foi possível criar a solicitação Premium.')}else{setMessage(`${profile.is_pro?'Renovação':'Plano'} ${selected.name} selecionad${profile.is_pro?'a':'o'}. Após o pagamento, o ADM poderá confirmar.`);await load()}
-  setWorking(false)
+  const {data,error}=await supabase.rpc('request_premium',{selected_plan:selected.id});
+  if(error){setMessage(error.message.includes('PENDING')?'Você já possui uma solicitação Premium em análise.':error.message.includes('RENEWAL_NOT_OPEN')?'A renovação antecipada abre quando faltarem 30 dias para o vencimento.':error.message.includes('PLAN_NOT_FOUND')?'Este plano não está mais disponível. Escolha outro.':'Não foi possível criar a solicitação Premium.');setWorking(false);return}
+  setWorking(false);
+  if(data)await startCheckout(String(data));
+  else{setMessage('Solicitação criada, mas não foi possível iniciar o checkout.');await load()}
  }
  async function cancel(){if(!request)return;setWorking(true);const {error}=await supabase.from('premium_requests').update({status:'cancelled'}).eq('id',request.id).eq('status','pending');setMessage(error?'Não foi possível cancelar a solicitação.':'Solicitação cancelada.');await load();setWorking(false)}
 
@@ -93,7 +105,7 @@ export function PremiumClient(){
   <div className="mt-5 grid gap-4 md:grid-cols-2">
    <section className="rounded-2xl border border-geek-line bg-geek-panel p-5"><div className="flex items-end justify-between gap-3"><div><h2 className="font-semibold">Benefícios do {selected?.name||'PRO'}</h2><p className="mt-1 text-xs text-slate-500">A lista muda conforme o plano selecionado.</p></div>{selectedBenefits.length>0&&<span className="rounded-full bg-orange-500/10 px-2 py-1 text-xs font-semibold text-orange-200">{selectedBenefits.length}</span>}</div><div className="mt-4 space-y-3 text-sm text-slate-300">{selectedBenefits.length?selectedBenefits.map(item=><div key={item.id} className="flex gap-2"><Check size={17} className="mt-0.5 shrink-0 text-green-400"/><div><span>{item.title}</span>{item.description&&<p className="mt-0.5 text-xs text-slate-500">{item.description}</p>}</div></div>):<p className="text-sm text-slate-500">Nenhum benefício específico foi configurado para este plano.</p>}</div></section>
    <section className="rounded-2xl border border-geek-line bg-geek-panel p-5"><h2 className="font-semibold">Sua assinatura</h2>
-    {status==='pending'?<div className="mt-4 space-y-3"><div className="rounded-2xl border border-yellow-500/25 bg-yellow-500/10 p-4"><p className="font-semibold text-yellow-300">Solicitação em análise</p><p className="mt-1 text-sm text-slate-400">Plano {requestPeriod} · {requestDuration} {requestDuration===1?'dia':'dias'} · {fmtPrice(Number(request?.amount||0))}</p><p className="mt-2 text-xs leading-5 text-slate-500">O prazo só começa depois que o ADM confirmar o pagamento.</p></div>{paymentUrl&&<a href={paymentUrl} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-geek-orange px-4 py-3 font-semibold">Ir para pagamento <ExternalLink size={17}/></a>}<button onClick={cancel} disabled={working} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/25 px-4 py-3 font-semibold text-red-300"><X size={17}/>Cancelar solicitação</button></div>
+    {status==='pending'?<div className="mt-4 space-y-3"><div className="rounded-2xl border border-yellow-500/25 bg-yellow-500/10 p-4"><p className="font-semibold text-yellow-300">Solicitação em análise</p><p className="mt-1 text-sm text-slate-400">Plano {requestPeriod} · {requestDuration} {requestDuration===1?'dia':'dias'} · {fmtPrice(Number(request?.amount||0))}</p><p className="mt-2 text-xs leading-5 text-slate-500">O prazo só começa depois que o ADM confirmar o pagamento.</p></div><button onClick={()=>request&&void startCheckout(request.id)} disabled={working} className="flex w-full items-center justify-center gap-2 rounded-xl bg-geek-orange px-4 py-3 font-semibold disabled:opacity-60"><CreditCard size={17}/>{working?'Abrindo Mercado Pago...':'Pagar com Mercado Pago'}</button><button onClick={cancel} disabled={working} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/25 px-4 py-3 font-semibold text-red-300"><X size={17}/>Cancelar solicitação</button></div>
     :profile.is_pro?<div className="mt-4"><div className="rounded-2xl border border-green-500/25 bg-green-500/10 p-4"><div className="flex items-center gap-2 font-semibold text-green-300"><ShieldCheck size={20}/>Você é GeekoPlay PRO</div>{activeUntil&&<div className="mt-3 flex items-start gap-2 text-sm text-slate-300"><CalendarDays size={17} className="mt-0.5 shrink-0"/><span>Seu acesso está ativo até <b className="font-semibold text-white">{fmtDate(activeUntil)}</b>.</span></div>}</div>{renewalOpen&&selected&&<button onClick={requestPremium} disabled={working} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-geek-orange px-4 py-3 font-semibold disabled:opacity-60"><Sparkles size={17}/>{working?'Criando renovação...':`Renovar com ${selected.name}`}</button>}</div>
     :<div className="mt-4">{selected?<><div className="rounded-xl border border-geek-line bg-geek-soft p-3"><p className="text-xs text-slate-500">Plano escolhido</p><div className="mt-1 flex items-end justify-between gap-3"><div><p className="font-semibold text-white">{selected.name}</p><p className="text-xs text-slate-400">{selected.duration_days} dias · {selectedBenefits.length} benefícios</p></div><p className="text-xl font-semibold text-yellow-300">{fmtPrice(selected.price)}</p></div></div><button onClick={requestPremium} disabled={working} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-geek-orange px-4 py-3 font-semibold disabled:opacity-60"><Sparkles size={17}/>{working?'Criando solicitação...':`Escolher ${selected.name}`}</button></>:<p className="text-sm text-slate-400">Escolha um plano acima para continuar.</p>}</div>}
     {message&&<p className="mt-3 text-sm text-slate-300">{message}</p>}
