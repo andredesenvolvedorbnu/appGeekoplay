@@ -39,7 +39,8 @@ export function CosplayClient(){
  function chooseImage(file:File|null,mode:CropMode){
   setMessage('');if(!file)return;if(!allowed.includes(file.type)){setMessage('Use uma imagem JPG, PNG ou WebP.');return}if(file.size>maxFile){setMessage('A imagem ultrapassa 8 MB. Escolha um arquivo menor.');return}setCropInput({file,mode});
  }
- async function upload(file:File,folder:string){if(!userId)throw new Error('AUTH');const path=`${userId}/${folder}/${crypto.randomUUID()}.webp`;const {error}=await supabase.storage.from('cosplay').upload(path,file,{contentType:'image/webp',cacheControl:'3600'});if(error)throw error;return {url:supabase.storage.from('cosplay').getPublicUrl(path).data.publicUrl,path}}\n function storagePath(url:string|null){if(!url)return null;const marker='/storage/v1/object/public/cosplay/';const index=url.indexOf(marker);if(index<0)return null;try{return decodeURIComponent(url.slice(index+marker.length))}catch{return null}}
+ async function upload(file:File,folder:string){if(!userId)throw new Error('AUTH');const path=`${userId}/${folder}/${crypto.randomUUID()}.webp`;const {error}=await supabase.storage.from('cosplay').upload(path,file,{contentType:'image/webp',cacheControl:'3600'});if(error)throw error;return {url:supabase.storage.from('cosplay').getPublicUrl(path).data.publicUrl,path}}
+ function storagePath(url:string|null){if(!url)return null;const marker='/storage/v1/object/public/cosplay/';const index=url.indexOf(marker);if(index<0)return null;try{return decodeURIComponent(url.slice(index+marker.length))}catch{return null}}
 
  async function handleCrop(file:File,previewUrl:string){
   const target=cropInput?.mode;setCropInput(null);
