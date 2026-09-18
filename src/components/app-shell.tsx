@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(()=>{setMobileMenu(false);setUserMenu(false)},[pathname]);
   useEffect(()=>{function close(event:PointerEvent){if(userMenuRef.current&&!userMenuRef.current.contains(event.target as Node))setUserMenu(false)}document.addEventListener('pointerdown',close);return()=>document.removeEventListener('pointerdown',close)},[]);
 
-  async function logout(){await supabase.auth.signOut();window.location.href='/login'}
+  async function logout(){await supabase.auth.signOut();window.location.href='/bem-vindo'}
   async function shareLevelUp(){if(!levelUp)return;const title=LEVEL_TITLES[Math.max(0,Math.min(9,levelUp-1))];const text=`Subi para o Nível ${levelUp} · ${title} no GeekoPlay! 🎮🔥`;try{if(navigator.share)await navigator.share({title:'GeekoPlay · Level Up!',text,url:window.location.origin});else{await navigator.clipboard.writeText(`${text} ${window.location.origin}`);setLevelShareMessage('Conquista copiada para compartilhar.')}}catch{setLevelShareMessage('Não foi possível compartilhar agora.') }}
 
   function submitSearch(event: FormEvent) {
