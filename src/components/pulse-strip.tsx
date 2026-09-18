@@ -15,6 +15,7 @@ export function PulseStrip(){
 
  async function load(){const {data:{user}}=await supabase.auth.getUser();setUserId(user?.id||null);const {data:rows}=await supabase.from('pulses').select('id,author_id,image_url,caption,fandom,expires_at,created_at').gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(50);const safe=(rows||[]) as Pulse[];setPulses(safe);const ids=[...new Set(safe.map(p=>p.author_id))];if(ids.length){const {data:people}=await supabase.from('profiles').select('id,display_name,avatar_url').in('id',ids);const map:Record<string,Profile>={};(people||[]).forEach((p:Profile)=>map[p.id]=p);setProfiles(map)}else setProfiles({})}
  useEffect(()=>{void load();const channel=supabase.channel('pulses-live').on('postgres_changes',{event:'*',schema:'public',table:'pulses'},()=>void load()).subscribe();return()=>{void supabase.removeChannel(channel)}},[supabase]);
+ useEffect(()=>{const params=new URLSearchParams(window.location.search);if(params.get('criar')==='pulse')setCreating(true)},[]);
  useEffect(()=>()=>{if(preview)URL.revokeObjectURL(preview)},[preview]);
 
  function choose(fileValue:File|null){setError('');if(!fileValue){setCropSource(null);return}if(!['image/jpeg','image/png','image/webp'].includes(fileValue.type)){setError('Use uma imagem JPG, PNG ou WEBP.');return}if(fileValue.size>10*1024*1024){setError('A imagem precisa ter no máximo 10 MB.');return}setCropSource(fileValue)}
