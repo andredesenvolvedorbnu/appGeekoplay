@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Award, Bell, CalendarDays, Compass, Crown, Gamepad2, Home, IdCard, LibraryBig, Mail, Menu, MessageSquare, Newspaper, PlusCircle, Rocket, Search, ShieldCheck, Sparkles, Store, Trophy, UserRound, Users, X } from 'lucide-react';
+import { Award, Bell, CalendarDays, Compass, Crown, Gamepad2, Home, IdCard, LibraryBig, LogOut, Mail, Menu, MessageSquare, Newspaper, PlusCircle, Rocket, Search, ShieldCheck, Sparkles, Store, Trophy, UserRound, Users, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { AdLayer } from '@/components/ad-layer';
 
@@ -41,6 +41,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [unreadMessages,setUnreadMessages]=useState(0);
   const [upcomingEvents,setUpcomingEvents]=useState<UpcomingEvent[]>([]);
   const [mobileMenu,setMobileMenu]=useState(false);
+  const [userMenu,setUserMenu]=useState(false);
+  const userMenuRef=useRef<HTMLDivElement>(null);
 
   async function loadSessionData(){
     const { data: { user } } = await supabase.auth.getUser();
@@ -82,7 +84,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return()=>{void supabase.removeChannel(channel)};
   },[supabase,userId]);
 
-  useEffect(()=>{setMobileMenu(false)},[pathname]);
+  useEffect(()=>{setMobileMenu(false);setUserMenu(false)},[pathname]);
+  useEffect(()=>{function close(event:PointerEvent){if(userMenuRef.current&&!userMenuRef.current.contains(event.target as Node))setUserMenu(false)}document.addEventListener('pointerdown',close);return()=>document.removeEventListener('pointerdown',close)},[]);
+
+  async function logout(){await supabase.auth.signOut();window.location.href='/login'}
 
   function submitSearch(event: FormEvent) {
     event.preventDefault();
@@ -108,7 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button onClick={()=>setMobileMenu(v=>!v)} className="rounded-lg p-2 text-white hover:bg-geek-soft lg:hidden" aria-label="Abrir menu">{mobileMenu?<X size={18}/>:<Menu size={18}/>}</button>
           <Link href="/mensagens" className="relative rounded-lg p-2 text-white hover:bg-geek-soft" aria-label="Mensagens"><Mail size={18}/>{unreadMessages>0&&<span className="absolute right-0 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-geek-orange px-1 text-[9px] font-black text-white">{unreadMessages>9?'9+':unreadMessages}</span>}</Link>
           <Link href="/notificacoes" className="relative rounded-lg p-2 text-white hover:bg-geek-soft" aria-label="Notificações"><Bell size={18}/>{unreadCount>0&&<span className="absolute right-0 top-0 grid h-4 min-w-4 place-items-center rounded-full bg-geek-orange px-1 text-[9px] font-black text-white">{unreadCount>9?'9+':unreadCount}</span>}</Link>
-          <Link href="/perfil" className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600 text-white" aria-label="Perfil">{profile?.avatar_url ? <img src={profile.avatar_url} alt="Perfil" className="h-full w-full object-cover object-center"/> : <UserRound size={16}/>}</Link>
+          <div ref={userMenuRef} className="relative"><button type="button" onClick={()=>setUserMenu(v=>!v)} className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600 text-white" aria-label="Abrir menu do usuário" aria-expanded={userMenu}>{profile?.avatar_url ? <img src={profile.avatar_url} alt="Perfil" className="h-full w-full object-cover object-center"/> : <UserRound size={16}/>}</button>{userMenu&&<div className="absolute right-0 top-11 z-[70] w-48 overflow-hidden rounded-xl border border-geek-line bg-geek-panel shadow-2xl"><Link href="/perfil" onClick={()=>setUserMenu(false)} className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-geek-soft"><UserRound size={16}/>Meu perfil</Link><button type="button" onClick={()=>void logout()} className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-red-300 hover:bg-red-500/10"><LogOut size={16}/>Sair da conta</button></div>}</div>
         </div>
       </header>
 
