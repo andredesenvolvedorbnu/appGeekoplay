@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Award, Bell, CalendarDays, Compass, Crown, Gamepad2, Home, IdCard, LibraryBig, LogOut, Mail, Menu, MessageSquare, Newspaper, PlusCircle, Rocket, Search, ShieldCheck, Sparkles, Store, Trophy, UserRound, Users, X } from 'lucide-react';
+import { Award, Bell, CalendarDays, Compass, Crown, Gamepad2, Home, IdCard, LibraryBig, LogOut, Mail, Menu, MessageSquare, Newspaper, PlusCircle, Rocket, Search, Share2, ShieldCheck, Sparkles, Store, Trophy, UserRound, Users, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { AdLayer } from '@/components/ad-layer';
 
@@ -26,8 +26,9 @@ const main = [
 ] as const;
 
 const interests = ['Games', 'Anime', 'Séries', 'Filmes', 'HQs & Comics', 'Cosplay', 'Tecnologia', 'RPG', 'K-Pop', 'Mangá', 'Colecionáveis'];
+const LEVEL_TITLES=['Novato','Curioso Geek','Explorador','Player 1','Veterano','Especialista','Mestre Geek','Lenda','Ícone Geek','Deus Geek'];
 
-type ShellProfile = { display_name:string; bio:string|null; avatar_url:string|null; favorite_categories:string[]; role:'user'|'admin'; is_pro:boolean };
+type ShellProfile = { display_name:string; bio:string|null; avatar_url:string|null; favorite_categories:string[]; role:'user'|'admin'; is_pro:boolean; level:number };
 type UpcomingEvent = { id:string; title:string; cover_url:string|null; starts_at:string; city:string|null; state:string|null; is_online:boolean };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -42,19 +43,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [upcomingEvents,setUpcomingEvents]=useState<UpcomingEvent[]>([]);
   const [mobileMenu,setMobileMenu]=useState(false);
   const [userMenu,setUserMenu]=useState(false);
+  const [levelUp,setLevelUp]=useState<number|null>(null);
+  const [levelShareMessage,setLevelShareMessage]=useState('');
   const userMenuRef=useRef<HTMLDivElement>(null);
+  const currentLevelRef=useRef<number|null>(null);
 
   async function loadSessionData(){
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setUserId(user.id);
     const [{ data },{count:notificationCount},{count:messageCount},{data:attendanceRows}]=await Promise.all([
-      supabase.from('profiles').select('display_name,bio,avatar_url,favorite_categories,role,is_pro').eq('id', user.id).single(),
+      supabase.from('profiles').select('display_name,bio,avatar_url,favorite_categories,role,is_pro,level').eq('id', user.id).single(),
       supabase.from('notifications').select('*',{count:'exact',head:true}).eq('user_id',user.id).eq('is_read',false),
       supabase.from('messages').select('*',{count:'exact',head:true}).eq('recipient_id',user.id).is('read_at',null),
       supabase.from('event_attendees').select('event_id').eq('user_id',user.id).in('status',['going','confirmed'])
     ]);
-    if (data) setProfile(data as ShellProfile);
+    if (data) { const next=data as ShellProfile; setProfile(next); if(currentLevelRef.current===null)currentLevelRef.current=Number(next.level||1); }
     setUnreadCount(notificationCount||0);
     setUnreadMessages(messageCount||0);
 
@@ -80,6 +84,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         if(row.sender_id===userId||row.recipient_id===userId)void loadSessionData();
       })
       .on('postgres_changes',{event:'*',schema:'public',table:'event_attendees',filter:`user_id=eq.${userId}`},()=>{void loadSessionData()})
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'profiles',filter:`id=eq.${userId}`},payload=>{const nextLevel=Number((payload.new as {level?:number}).level||0);const previous=currentLevelRef.current;if(previous!==null&&nextLevel>previous){setLevelShareMessage('');setLevelUp(nextLevel)}if(nextLevel>0)currentLevelRef.current=nextLevel;void loadSessionData()})
       .subscribe();
     return()=>{void supabase.removeChannel(channel)};
   },[supabase,userId]);
@@ -88,6 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(()=>{function close(event:PointerEvent){if(userMenuRef.current&&!userMenuRef.current.contains(event.target as Node))setUserMenu(false)}document.addEventListener('pointerdown',close);return()=>document.removeEventListener('pointerdown',close)},[]);
 
   async function logout(){await supabase.auth.signOut();window.location.href='/login'}
+  async function shareLevelUp(){if(!levelUp)return;const title=LEVEL_TITLES[Math.max(0,Math.min(9,levelUp-1))];const text=`Subi para o Nível ${levelUp} · ${title} no GeekoPlay! 🎮🔥`;try{if(navigator.share)await navigator.share({title:'GeekoPlay · Level Up!',text,url:window.location.origin});else{await navigator.clipboard.writeText(`${text} ${window.location.origin}`);setLevelShareMessage('Conquista copiada para compartilhar.')}}catch{setLevelShareMessage('Não foi possível compartilhar agora.') }}
 
   function submitSearch(event: FormEvent) {
     event.preventDefault();
@@ -133,6 +139,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Link href="/recap" className="mt-3 block rounded-2xl border border-geek-line bg-geek-panel p-4 transition hover:border-orange-500/40"><div className="flex items-center gap-2"><Sparkles size={17} className="text-geek-orange"/><b>Meu Recap Geek</b></div><p className="mt-2 text-sm text-slate-400">Reviva sua metade do ano geek quando quiser.</p></Link>
         <div className="mt-3 rounded-2xl border border-geek-line bg-geek-panel p-4"><div className="flex items-center justify-between"><b>Próximos eventos</b><Link href="/eventos" className="text-xs font-bold text-geek-orange">Ver todos</Link></div>{upcomingEvents.length?<div className="mt-3 space-y-3">{upcomingEvents.map(event=><Link key={event.id} href={`/eventos/${event.id}`} className="flex min-w-0 items-center gap-3 rounded-xl p-1 transition hover:bg-geek-soft"><div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-geek-soft">{event.cover_url?<img src={event.cover_url} alt="" className="h-full w-full object-contain object-center"/>:<CalendarDays size={18} className="text-geek-orange"/>}</div><div className="min-w-0"><p className="truncate text-sm font-bold">{event.title}</p><p className="mt-0.5 text-[11px] text-slate-400">{new Date(event.starts_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})} · {event.is_online?'Online':[event.city,event.state].filter(Boolean).join('/')}</p></div></Link>)}</div>:<p className="mt-2 text-sm text-slate-400">Você ainda não confirmou presença em nenhum evento futuro.</p>}</div>
       </aside>
+
+      {levelUp&&<div className="fixed inset-0 z-[120] grid place-items-center bg-black/75 p-4" role="dialog" aria-modal="true" aria-label="Novo nível alcançado"><div className="w-full max-w-sm rounded-3xl border border-orange-500/40 bg-geek-panel p-6 text-center shadow-2xl"><div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-orange-500/15 text-orange-300"><Trophy size={30}/></div><p className="mt-4 text-xs font-black uppercase tracking-[.2em] text-geek-orange">Level Up!</p><h2 className="mt-2 text-2xl font-black">Nível {levelUp} · {LEVEL_TITLES[Math.max(0,Math.min(9,levelUp-1))]}</h2><p className="mt-2 text-sm leading-6 text-slate-400">Seu progresso no GeekoPlay subiu de nível. Compartilhe essa conquista com a comunidade.</p>{levelShareMessage&&<p className="mt-3 rounded-xl bg-geek-soft px-3 py-2 text-xs text-slate-300">{levelShareMessage}</p>}<div className="mt-5 grid gap-2 sm:grid-cols-2"><button onClick={()=>setLevelUp(null)} className="rounded-xl border border-geek-line px-4 py-3 text-sm font-bold">Fechar</button><button onClick={()=>void shareLevelUp()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-geek-orange px-4 py-3 text-sm font-black text-white"><Share2 size={16}/>Compartilhar</button></div></div></div>}
 
       <nav className="fixed inset-x-0 bottom-0 z-50 flex h-16 items-center justify-around border-t border-geek-line bg-geek-panel lg:hidden">{[['Início','/',Home],['Explorar','/explorar',Compass],['Criar','/criar',PlusCircle],['Alertas','/notificacoes',Bell],[profile?.role === 'admin' ? 'ADM' : 'Perfil',profile?.role === 'admin' ? '/admin' : '/perfil',profile?.role === 'admin' ? ShieldCheck : UserRound]].map(([label, href, Icon]: any)=><Link key={label} href={href} className={`relative flex min-w-14 flex-col items-center gap-1 text-[11px] ${active(href) ? 'text-orange-300' : 'text-slate-400'}`}><Icon size={21}/>{label}{label==='Alertas'&&unreadCount>0&&<span className="absolute right-2 top-0 h-2 w-2 rounded-full bg-geek-orange"/>}</Link>)}</nav>
     </div>
