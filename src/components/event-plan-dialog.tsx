@@ -23,19 +23,28 @@ export function EventPlanDialog({open,userId,onClose,onSaved}:{open:boolean;user
   const parsed=new Date(date);
   if(Number.isNaN(parsed.getTime())){setError('Informe uma data válida.');return}
   setBusy(true);
+  let createdPlanId:string|null=null;
+  let createdPostId:string|null=null;
   try{
    const cleanTitle=title.trim();const cleanLocation=location.trim();const cleanNote=note.trim();
    const {data:plan,error:planError}=await supabase.from('user_event_plans').insert({user_id:userId,title:cleanTitle,event_date:parsed.toISOString(),location:cleanLocation,note:cleanNote||null}).select('id').single();
    if(planError||!plan)throw planError||new Error('Falha ao salvar evento.');
+   createdPlanId=plan.id;
    if(share){
     const cardData={event_plan_id:plan.id,title:cleanTitle,event_date:parsed.toISOString(),location:cleanLocation,note:cleanNote||null};
     const details=[`🎟️ Vou em ${cleanTitle}!`,`📅 ${parsed.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}`,`📍 ${cleanLocation}`,cleanNote||null].filter(Boolean).join('\n');
     const {data:post,error:postError}=await supabase.from('posts').insert({author_id:userId,content:details,category:'Eventos',post_type:'event_plan',card_data:cardData}).select('id').single();
-    if(postError)throw postError;
-    await supabase.from('user_event_plans').update({shared_post_id:post.id,updated_at:new Date().toISOString()}).eq('id',plan.id);
+    if(postError||!post)throw postError||new Error('Falha ao compartilhar evento.');
+    createdPostId=post.id;
+    const {error:linkError}=await supabase.from('user_event_plans').update({shared_post_id:post.id,updated_at:new Date().toISOString()}).eq('id',plan.id).eq('user_id',userId);
+    if(linkError)throw linkError;
    }
    setTitle('');setDate('');setLocation('');setNote('');await onSaved();onClose();
-  }catch{setError('Não foi possível salvar o evento. Tente novamente.')}finally{setBusy(false)}
+  }catch{
+   if(createdPostId)await supabase.from('posts').delete().eq('id',createdPostId).eq('author_id',userId);
+   if(createdPlanId)await supabase.from('user_event_plans').delete().eq('id',createdPlanId).eq('user_id',userId);
+   setError('Não foi possível salvar o evento. Nenhuma cópia incompleta foi mantida; tente novamente.');
+  }finally{setBusy(false)}
  }
 
  return <div className="fixed inset-0 z-[120] grid place-items-center bg-black/75 p-3" role="dialog" aria-modal="true">
