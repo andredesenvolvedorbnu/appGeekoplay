@@ -4,7 +4,7 @@ import { Camera, IdCard, MessageSquarePlus, ShoppingBag, Zap } from 'lucide-reac
 const actions=[
  {title:'Criar publicação',description:'Publique texto, foto e escolha uma categoria no feed.',href:'/',icon:MessageSquarePlus},
  {title:'Criar meu Geek Card',description:'Monte sua carta com foto, raridade, ATK, DEF, XP e nível.',href:'/meu-card',icon:IdCard},
- {title:'Criar Pulse',description:'Compartilhe uma foto por 24 horas com seu fandom.',href:'/',icon:Zap},
+ {title:'Criar Pulse',description:'Compartilhe uma foto por 24 horas com seu fandom.',href:'/?criar=pulse',icon:Zap},
  {title:'Anunciar no Mercado Geek',description:'Cadastre um item usado ou colecionável para negociação.',href:'/mercado',icon:ShoppingBag},
  {title:'Atualizar foto e capa',description:'Edite avatar e capa do seu perfil sem perder proporção.',href:'/perfil',icon:Camera},
 ];
