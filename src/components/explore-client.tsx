@@ -44,6 +44,26 @@ export function ExploreClient(){
     setEngagement(map);setLoading(false);
   })()},[supabase]);
 
+  useEffect(()=>{
+    const raw=query.trim();
+    if(raw.length<2)return;
+    const timer=window.setTimeout(()=>{void (async()=>{
+      const q=raw.replace(/[%(),]/g,' ').replace(/\s+/g,' ').trim();
+      if(q.length<2)return;
+      const [{data:people},{data:matchedPosts}]=await Promise.all([
+        supabase.from('profiles').select('id,display_name,username,avatar_url,bio,favorite_categories').or(`display_name.ilike.%${q}%,username.ilike.%${q}%,bio.ilike.%${q}%`).limit(30),
+        supabase.from('posts').select('id,author_id,content,image_url,video_url,category,created_at').or(`content.ilike.%${q}%,category.ilike.%${q}%`).order('created_at',{ascending:false}).limit(60)
+      ]);
+      const matchedPeople=(people||[]) as Profile[];
+      let authorPosts:Post[]=[];
+      const authorIds=matchedPeople.map(p=>p.id);
+      if(authorIds.length){const {data}=await supabase.from('posts').select('id,author_id,content,image_url,video_url,category,created_at').in('author_id',authorIds).order('created_at',{ascending:false}).limit(60);authorPosts=(data||[]) as Post[]}
+      setProfiles(current=>{const map=new Map(current.map(p=>[p.id,p]));matchedPeople.forEach(p=>map.set(p.id,p));return [...map.values()]});
+      setPosts(current=>{const map=new Map(current.map(p=>[p.id,p]));[...((matchedPosts||[]) as Post[]),...authorPosts].forEach(p=>map.set(p.id,p));return [...map.values()]});
+    })()},250);
+    return()=>window.clearTimeout(timer);
+  },[query,supabase]);
+
   const normalized=query.trim().toLowerCase();
   const profileMap=useMemo(()=>{const map:Record<string,Profile>={};profiles.forEach(p=>map[p.id]=p);return map},[profiles]);
   const score=(post:Post)=>{const stats=engagement[post.id]||{likes:0,comments:0};const ageHours=Math.max(1,(Date.now()-new Date(post.created_at).getTime())/36e5);const recency=Math.max(0,72-ageHours)/24;return stats.likes*3+stats.comments*4+recency};
