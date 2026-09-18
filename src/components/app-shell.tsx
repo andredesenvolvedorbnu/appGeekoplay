@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Award, Bell, CalendarDays, Compass, Crown, Gamepad2, Home, IdCard, LibraryBig, LogOut, Mail, Menu, MessageSquare, Newspaper, PlusCircle, Rocket, Search, Share2, ShieldCheck, Sparkles, Store, Trophy, UserRound, Users, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { AdLayer } from '@/components/ad-layer';
+import { PioneerDiscoveryPrompt } from '@/components/pioneer-discovery-prompt';
 
 const main = [
   ['Página inicial', '/', Home],
@@ -92,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(()=>{setMobileMenu(false);setUserMenu(false)},[pathname]);
   useEffect(()=>{function close(event:PointerEvent){if(userMenuRef.current&&!userMenuRef.current.contains(event.target as Node))setUserMenu(false)}document.addEventListener('pointerdown',close);return()=>document.removeEventListener('pointerdown',close)},[]);
 
-  async function logout(){await supabase.auth.signOut();window.location.href='/bem-vindo'}
+  async function logout(){if(userId)sessionStorage.removeItem(`geekoplay-discovery-prompt-${userId}`);await supabase.auth.signOut();window.location.href='/bem-vindo'}
   async function shareLevelUp(){if(!levelUp)return;const title=LEVEL_TITLES[Math.max(0,Math.min(9,levelUp-1))];const text=`Subi para o Nível ${levelUp} · ${title} no GeekoPlay! 🎮🔥`;try{if(navigator.share)await navigator.share({title:'GeekoPlay · Level Up!',text,url:window.location.origin});else{await navigator.clipboard.writeText(`${text} ${window.location.origin}`);setLevelShareMessage('Conquista copiada para compartilhar.')}}catch{setLevelShareMessage('Não foi possível compartilhar agora.') }}
 
   function submitSearch(event: FormEvent) {
@@ -132,7 +133,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Link href="/premium" className="mt-3 block rounded-2xl border border-orange-500/30 bg-orange-500/10 p-4"><Crown className="mb-2 text-orange-300" size={20}/><b className="text-sm text-orange-200">{profile?.is_pro ? 'Você é GeekoPlay PRO' : 'Seja Premium'}</b><p className="mt-1 text-xs text-slate-400">{profile?.is_pro?'Seu selo PRO está ativo.':'Veja benefícios e solicite sua assinatura.'}</p></Link>
       </aside>
 
-      <main className="min-h-screen pb-20 pt-16 lg:pb-8 lg:pl-64 xl:pr-72"><AdLayer/>{children}</main>
+      <main className="min-h-screen pb-20 pt-16 lg:pb-8 lg:pl-64 xl:pr-72"><AdLayer/><PioneerDiscoveryPrompt/>{children}</main>
 
       <aside className="fixed bottom-0 right-0 top-14 hidden w-72 overflow-y-auto border-l border-geek-line bg-geek-panel p-4 xl:block">
         <div className="rounded-2xl border border-geek-line bg-geek-panel p-4"><div className="flex items-center justify-between"><b>Sobre mim</b><Link href="/perfil" className="text-xs font-bold text-geek-orange">Editar</Link></div><p className="mt-2 text-sm leading-5 text-slate-400">{profile?.bio || 'Complete seu perfil e mostre seus fandoms para a comunidade.'}</p>{!!profile?.favorite_categories?.length && <div className="mt-3 flex flex-wrap gap-1">{profile.favorite_categories.slice(0,6).map(item=><span key={item} className="rounded-full bg-geek-soft px-2 py-1 text-[10px] text-slate-300">{item}</span>)}</div>}</div>
