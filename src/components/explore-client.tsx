@@ -18,6 +18,7 @@ export function ExploreClient(){
   const searchParams=useSearchParams();
   const [posts,setPosts]=useState<Post[]>([]);
   const [profiles,setProfiles]=useState<Profile[]>([]);
+  const [viewerId,setViewerId]=useState<string|null>(null);
   const [engagement,setEngagement]=useState<Record<string,Engagement>>({});
   const [loading,setLoading]=useState(true);
   const [query,setQuery]=useState('');
@@ -32,6 +33,7 @@ export function ExploreClient(){
 
   useEffect(()=>{(async()=>{
     setLoading(true);
+    const {data:{user}}=await supabase.auth.getUser();setViewerId(user?.id||null);
     const [{data:postRows},{data:profileRows}]=await Promise.all([
       supabase.from('posts').select('id,author_id,content,image_url,video_url,category,created_at').order('created_at',{ascending:false}).limit(120),
       supabase.from('profiles').select('id,display_name,username,avatar_url,bio,favorite_categories').order('created_at',{ascending:false}).limit(150)
@@ -75,7 +77,7 @@ export function ExploreClient(){
     return byCategory&&bySearch;
   }).sort((a,b)=>score(b)-score(a)),[posts,category,normalized,profileMap,engagement]);
 
-  const filteredProfiles=profiles.filter(p=>!normalized?false:`${p.display_name} ${p.username||''} ${p.bio||''} ${(p.favorite_categories||[]).join(' ')}`.toLowerCase().includes(normalized)).slice(0,8);
+  const filteredProfiles=profiles.filter(p=>p.id!==viewerId).filter(p=>{const searchMatch=!normalized||`${p.display_name} ${p.username||''} ${p.bio||''} ${(p.favorite_categories||[]).join(' ')}`.toLowerCase().includes(normalized);const categoryMatch=category==='Todos'||(p.favorite_categories||[]).includes(category);return searchMatch&&categoryMatch}).slice(0,12);
 
   const trending=useMemo(()=>{
     const values:Record<string,{posts:number;score:number}>={};
@@ -90,7 +92,7 @@ export function ExploreClient(){
 
     <div className="rounded-2xl border border-geek-line bg-geek-panel p-3 sm:p-4"><div className="flex items-center gap-2 rounded-xl border border-geek-line bg-geek-soft px-3"><Search size={18} className="shrink-0 text-slate-500"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar pessoas, posts ou fandoms..." className="w-full bg-transparent py-3 text-sm outline-none"/></div><div className="mt-3 overflow-x-auto pb-1"><div className="flex min-w-max gap-2">{categories.map(c=><button key={c} onClick={()=>setCategory(c)} className={`rounded-full border px-3 py-2 text-xs ${category===c?'border-geek-orange bg-geek-orange text-white':'border-geek-line bg-geek-bg text-slate-300'}`}>{c}</button>)}</div></div></div>
 
-    {filteredProfiles.length>0&&<section><div className="mb-3 flex items-center gap-2"><Users size={18} className="text-geek-orange"/><h2 className="font-bold">Pessoas</h2></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{filteredProfiles.map(p=><Link href={`/perfil/${p.id}`} key={p.id} className="rounded-2xl border border-geek-line bg-geek-panel p-4 transition hover:border-orange-500/50"><div className="flex items-center gap-3"><div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600">{p.avatar_url&&<img src={p.avatar_url} alt="" className="h-full w-full object-cover object-center"/>}</div><div className="min-w-0"><b className="block truncate text-sm">{p.display_name}</b><span className="text-xs text-slate-500">@{p.username||'geek'}</span></div></div>{p.bio&&<p className="mt-3 line-clamp-2 text-xs text-slate-400">{p.bio}</p>}</Link>)}</div></section>}
+    {filteredProfiles.length>0&&<section><div className="mb-3 flex items-center gap-2"><Users size={18} className="text-geek-orange"/><h2 className="font-bold">{normalized?'Pessoas':'Pessoas para conhecer'}</h2><span className="text-xs text-slate-500">{normalized?'perfis encontrados':'encontre sua galera no GeekoPlay'}</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{filteredProfiles.map(p=><Link href={`/perfil/${p.id}`} key={p.id} className="rounded-2xl border border-geek-line bg-geek-panel p-4 transition hover:border-orange-500/50"><div className="flex items-center gap-3"><div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600">{p.avatar_url?<img src={p.avatar_url} alt="" className="h-full w-full object-cover object-center"/>:<div className="grid h-full place-items-center text-sm font-black text-white">{p.display_name.slice(0,1).toUpperCase()}</div>}</div><div className="min-w-0"><b className="block truncate text-sm">{p.display_name}</b><span className="text-xs text-slate-500">@{p.username||'geek'}</span></div></div>{p.bio&&<p className="mt-3 line-clamp-2 text-xs text-slate-400">{p.bio}</p>}{p.favorite_categories?.length>0&&<div className="mt-3 flex flex-wrap gap-1">{p.favorite_categories.slice(0,3).map(item=><span key={item} className="rounded-full bg-geek-soft px-2 py-1 text-[10px] text-slate-400">{item}</span>)}</div>}</Link>)}</div></section>}
 
     {trending.length>0&&<section><div className="mb-3 flex items-center gap-2"><Flame size={18} className="text-geek-orange"/><h2 className="font-bold">Trending agora</h2><span className="text-xs text-slate-500">baseado em curtidas, comentários e recência</span></div><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{trending.map(([name,data],index)=><button key={name} onClick={()=>setCategory(name)} className="rounded-2xl border border-geek-line bg-geek-panel p-4 text-left hover:border-orange-500/50"><div className="flex items-center gap-3"><span className="text-xl font-black text-geek-orange">#{index+1}</span><div><b>{name}</b><p className="text-xs text-slate-500">{data.posts} {data.posts===1?'publicação':'publicações'} em alta</p></div></div></button>)}</div></section>}
 
