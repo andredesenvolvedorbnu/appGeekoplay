@@ -52,7 +52,8 @@ export async function POST(request:Request){
           failure:`${origin}${returnPath}?pagamento=falhou`
         },
         auto_return:'approved',
-        metadata:{kind,request_id:requestId,user_id:user.id}
+        metadata:{kind,request_id:requestId,user_id:user.id},
+        notification_url:`${origin}/api/payments/webhook`
       }),
       cache:'no-store'
     });
