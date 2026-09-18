@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 
 type RecapStats={posts:number;photos:number;pulses:number;events:number};
 type Recap={id:string;user_id:string;year:number;semester:number;media_urls:string[];stats:RecapStats;is_pinned:boolean;created_at:string};
-type PostRow={image_url:string|null;created_at:string};
-type PulseRow={image_url:string;created_at:string};
+type PostRow={image_url:string|null;content:string|null;created_at:string};
+type PulseRow={image_url:string;caption:string|null;created_at:string};
 type EventRow={id:string;starts_at:string};
 
 function periodFor(year:number,semester:number){
@@ -29,6 +29,7 @@ export function RecapClient(){
   const [building,setBuilding]=useState(false);
   const [slide,setSlide]=useState(0);
   const [message,setMessage]=useState('');
+  const [mediaCaptions,setMediaCaptions]=useState<Record<string,string>>({});
 
   async function load(){
     setLoading(true);setMessage('');
@@ -36,9 +37,30 @@ export function RecapClient(){
     if(!user){setLoading(false);return;}
     setUserId(user.id);
     const {data}=await supabase.from('recaps').select('*').eq('user_id',user.id).eq('year',year).eq('semester',semester).maybeSingle();
-    setRecap((data||null) as Recap|null);
+    const loaded=(data||null) as Recap|null;
+    setRecap(loaded);
+    setMediaCaptions({});
+    if(loaded?.media_urls?.length){
+      const urls=loaded.media_urls.slice(0,16);
+      const [postCaptions,pulseCaptions]=await Promise.all([
+        supabase.from('posts').select('image_url,content').eq('author_id',user.id).in('image_url',urls),
+        supabase.from('pulses').select('image_url,caption').eq('author_id',user.id).in('image_url',urls)
+      ]);
+      const captions:Record<string,string>={};
+      (postCaptions.data||[]).forEach(row=>{if(row.image_url&&row.content?.trim())captions[row.image_url]=row.content.trim()});
+      (pulseCaptions.data||[]).forEach(row=>{if(row.image_url&&row.caption?.trim())captions[row.image_url]=row.caption.trim()});
+      setMediaCaptions(captions);
+    }
     setSlide(0);setLoading(false);
   }
+
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search);
+    const queryYear=Number(params.get('ano'));
+    const querySemester=Number(params.get('semestre'));
+    if(Number.isInteger(queryYear)&&queryYear>=2020&&queryYear<=now.getFullYear())setYear(queryYear);
+    if(querySemester===1||querySemester===2)setSemester(querySemester);
+  },[]);
 
   useEffect(()=>{void load()},[year,semester,supabase]);
 
@@ -54,8 +76,8 @@ export function RecapClient(){
     const {start,end}=periodFor(year,semester);
     try{
       const [postsResult,pulsesResult,eventsResult]=await Promise.all([
-        supabase.from('posts').select('image_url,created_at').eq('author_id',userId).gte('created_at',start).lt('created_at',end).order('created_at',{ascending:false}),
-        supabase.from('pulses').select('image_url,created_at').eq('author_id',userId).gte('created_at',start).lt('created_at',end).order('created_at',{ascending:false}),
+        supabase.from('posts').select('image_url,content,created_at').eq('author_id',userId).gte('created_at',start).lt('created_at',end).order('created_at',{ascending:false}),
+        supabase.from('pulses').select('image_url,caption,created_at').eq('author_id',userId).gte('created_at',start).lt('created_at',end).order('created_at',{ascending:false}),
         supabase.from('events').select('id,starts_at').gte('starts_at',start).lt('starts_at',end)
       ]);
       const posts=(postsResult.data||[]) as PostRow[];
@@ -63,15 +85,18 @@ export function RecapClient(){
       const eventIds=((eventsResult.data||[]) as EventRow[]).map(e=>e.id);
       let eventsCount=0;
       if(eventIds.length){
-        const {count}=await supabase.from('event_attendees').select('*',{count:'exact',head:true}).eq('user_id',userId).eq('status','going').in('event_id',eventIds);
+        const {count}=await supabase.from('event_attendees').select('*',{count:'exact',head:true}).eq('user_id',userId).in('status',['going','confirmed']).in('event_id',eventIds);
         eventsCount=count||0;
       }
       const media=[...posts.map(p=>p.image_url).filter(Boolean) as string[],...pulses.map(p=>p.image_url).filter(Boolean)];
       const unique=[...new Set(media)].slice(0,16);
+      const captions:Record<string,string>={};
+      posts.forEach(post=>{if(post.image_url&&post.content?.trim())captions[post.image_url]=post.content.trim()});
+      pulses.forEach(pulse=>{if(pulse.image_url&&pulse.caption?.trim())captions[pulse.image_url]=pulse.caption.trim()});
       const stats:RecapStats={posts:posts.length,photos:unique.length,pulses:pulses.length,events:eventsCount};
       const {data,error}=await supabase.from('recaps').upsert({user_id:userId,year,semester,media_urls:unique,stats,is_pinned:recap?.is_pinned||false},{onConflict:'user_id,year,semester'}).select('*').single();
       if(error)throw error;
-      setRecap(data as Recap);setSlide(0);
+      setRecap(data as Recap);setMediaCaptions(captions);setSlide(0);
       setMessage(unique.length?'Seu Recap Geek foi atualizado com sucesso.':'Recap criado. Ainda não há fotos neste semestre, mas suas estatísticas já foram salvas.');
     }catch{setMessage('Não foi possível montar seu Recap Geek agora. Tente novamente.')}finally{setBuilding(false)}
   }
@@ -110,7 +135,7 @@ export function RecapClient(){
       <section className="overflow-hidden rounded-3xl border border-geek-line bg-geek-panel">
         <div className="relative aspect-[16/9] min-h-[260px] max-h-[620px] w-full overflow-hidden bg-black">
           {media.length?media.map((url,index)=><img key={url} src={url} alt={`Foto ${index+1} do Recap Geek`} className={`absolute inset-0 h-full w-full object-contain object-center transition-opacity duration-1000 ${index===slide?'opacity-100':'opacity-0'}`} style={index===slide?{animation:'geekoplayKenBurns 4.2s ease-out both'}:undefined}/>):<div className="grid h-full place-items-center text-center text-slate-500"><div><ImageIcon className="mx-auto mb-2" size={34}/><p>Ainda não há fotos publicadas neste semestre.</p></div></div>}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-5 pb-5 pt-20 text-white"><p className="text-xs font-bold text-orange-300">{semesterLabel(year,semester)}</p><h2 className="text-2xl font-black">Minha metade do ano geek</h2></div>
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-5 pb-5 pt-20 text-white"><p className="text-xs font-bold text-orange-300">{semesterLabel(year,semester)}</p><h2 className="text-2xl font-black">Minha metade do ano geek</h2>{media[slide]&&mediaCaptions[media[slide]]&&<p className="mt-2 line-clamp-2 max-w-2xl text-sm text-slate-200">{mediaCaptions[media[slide]]}</p>}</div>
         </div>
         {media.length>1&&<div className="flex gap-1.5 overflow-x-auto p-3">{media.map((url,index)=><button key={url} onClick={()=>setSlide(index)} className={`h-14 w-20 shrink-0 overflow-hidden rounded-lg border ${index===slide?'border-geek-orange':'border-geek-line'}`}><img src={url} alt="" className="h-full w-full object-cover object-center"/></button>)}</div>}
       </section>
