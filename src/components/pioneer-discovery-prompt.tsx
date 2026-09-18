@@ -52,35 +52,57 @@ export function PioneerDiscoveryPrompt(){
 
       if(!profile||!profile.pioneer_number||profile.pioneer_number>1000||Number(profile.discovery_prompt_views||0)>=2)return;
 
-      const {data:registered,error}=await supabase.rpc('register_discovery_prompt_view');
-      if(error||!registered?.length)return;
-
       sessionStorage.setItem(sessionKey,'shown');
       setCurrent(profile as CurrentProfile);
       setOpen(true);
+
+      // Tracking must never block the onboarding UI. Register it best-effort.
+      void supabase.rpc('register_discovery_prompt_view');
     })();
   },[supabase]);
 
-  async function loadPeople(){
-    if(!current)return;
+  useEffect(()=>{
+    async function openFromShortcut(){
+      const {data:{user}}=await supabase.auth.getUser();
+      if(!user)return;
+      const {data:profile}=await supabase.from('profiles')
+        .select('id,city,favorite_categories,pioneer_number,discovery_prompt_views')
+        .eq('id',user.id).maybeSingle();
+      if(!profile)return;
+      setCurrent(profile as CurrentProfile);
+      setStage('people');
+      setOpen(true);
+      setPeople([]);
+      window.setTimeout(()=>{void loadPeopleFor(profile as CurrentProfile)},0);
+    }
+    window.addEventListener('geekoplay-open-discovery',openFromShortcut);
+    return()=>window.removeEventListener('geekoplay-open-discovery',openFromShortcut);
+  },[supabase]);
+
+  async function loadPeopleFor(profile:CurrentProfile){
     const [{data:rows},{data:follows}]=await Promise.all([
       supabase.from('profiles')
         .select('id,display_name,username,avatar_url,bio,city,favorite_categories,level,pioneer_number,created_at')
-        .neq('id',current.id)
+        .neq('id',profile.id)
         .order('created_at',{ascending:true})
         .limit(80),
-      supabase.from('follows').select('following_id').eq('follower_id',current.id)
+      supabase.from('follows').select('following_id').eq('follower_id',profile.id)
     ]);
     const followed=new Set((follows||[]).map(row=>row.following_id as string));
     setFollowing(followed);
     const ranked=((rows||[]) as Person[]).sort((a,b)=>{
-      const aShared=overlap(current.favorite_categories||[],a.favorite_categories||[]).length;
-      const bShared=overlap(current.favorite_categories||[],b.favorite_categories||[]).length;
-      const aCity=!!current.city&&!!a.city&&current.city.toLowerCase()===a.city.toLowerCase()?1:0;
-      const bCity=!!current.city&&!!b.city&&current.city.toLowerCase()===b.city.toLowerCase()?1:0;
+      const aShared=overlap(profile.favorite_categories||[],a.favorite_categories||[]).length;
+      const bShared=overlap(profile.favorite_categories||[],b.favorite_categories||[]).length;
+      const aCity=!!profile.city&&!!a.city&&profile.city.toLowerCase()===a.city.toLowerCase()?1:0;
+      const bCity=!!profile.city&&!!b.city&&profile.city.toLowerCase()===b.city.toLowerCase()?1:0;
       return bShared-aShared||bCity-aCity||(a.pioneer_number||9999)-(b.pioneer_number||9999);
     });
     setPeople(ranked.slice(0,12));
+  }
+
+  async function loadPeople(){
+    if(!current)return;
+    await loadPeopleFor(current);
   }
 
   async function accept(){
