@@ -13,6 +13,8 @@ export default function CadastroPage() {
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
+  const [resending, setResending] = useState(false);
 
   async function signup(e: React.FormEvent) {
     e.preventDefault();
@@ -37,7 +39,26 @@ export default function CadastroPage() {
       return;
     }
 
-    setMessage('Conta criada! Confira seu e-mail para confirmar o cadastro.');
+    setSignupEmail(email.trim());
+    setMessage('Conta criada! Enviamos um link de confirmação para o seu e-mail. Se não chegar, use o botão de reenviar abaixo.');
+  }
+
+  async function resendConfirmation() {
+    if (!signupEmail || resending) return;
+    setResending(true);
+    setIsError(false);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: signupEmail,
+      options: { emailRedirectTo: `${location.origin}/auth/callback` }
+    });
+    setResending(false);
+    if (error) {
+      setIsError(true);
+      setMessage(traduzirErroAuth(error.message));
+      return;
+    }
+    setMessage('E-mail de confirmação reenviado. Confira também as abas Promoções, Social e Spam.');
   }
 
   return (
@@ -52,6 +73,7 @@ export default function CadastroPage() {
           <button disabled={loading} className="w-full rounded-xl bg-geek-orange py-3 font-black disabled:opacity-60">{loading ? 'Criando conta...' : 'Criar conta'}</button>
         </form>
         {message && <p className={`text-sm mt-4 ${isError ? 'text-red-400' : 'text-emerald-400'}`} role="status">{message}</p>}
+        {signupEmail && !isError && <button type="button" onClick={()=>void resendConfirmation()} disabled={resending} className="mt-3 w-full rounded-xl border border-geek-line bg-geek-soft py-2.5 text-sm font-bold disabled:opacity-60">{resending?'Reenviando...':'Reenviar e-mail de confirmação'}</button>}
         <p className="text-sm text-slate-400 mt-6 text-center">Já tem conta? <Link href="/login" className="text-geek-orange font-bold">Entrar</Link></p>
       </section>
     </main>
