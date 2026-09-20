@@ -12,6 +12,8 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.geekoplay.com'),
+  alternates: { canonical: '/' },
   title: 'GeekoPlay',
   description: 'A comunidade geek que você merecia.',
   applicationName: 'GeekoPlay',
