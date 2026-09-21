@@ -109,7 +109,6 @@ export function PaymentMethodDialog({open,kind,requestId,amount,title,onClose,on
 
       {!pix&&!approved&&<div className="mt-5 grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/8 p-4"><QrCode className="text-emerald-300" size={24}/><p className="mt-3 font-black text-white">Pix</p><p className="mt-1 text-xs leading-5 text-slate-400">QR Code e Pix Copia e Cola aqui no GeekoPlay.</p><input value={cpf} onChange={e=>setCpf(e.target.value)} inputMode="numeric" maxLength={14} placeholder="CPF do pagador" className="mt-3 w-full rounded-xl border border-geek-line bg-geek-panel px-3 py-2 text-xs text-white outline-none"/><button onClick={()=>void pay('pix')} disabled={!!working} className="mt-3 w-full rounded-xl bg-emerald-500/15 px-3 py-2 text-xs font-black text-emerald-200 disabled:opacity-60">{working==='pix'?'Gerando Pix...':'Gerar Pix'}</button></div><button onClick={()=>void pay('card')} disabled={!!working} className="rounded-2xl border border-blue-500/30 bg-blue-500/8 p-4 text-left transition hover:border-blue-400/60 disabled:opacity-60">
- disabled={!!working} className="rounded-2xl border border-blue-500/30 bg-blue-500/8 p-4 text-left transition hover:border-blue-400/60 disabled:opacity-60">
           <CreditCard className="text-blue-300" size={24}/>
           <p className="mt-3 font-black text-white">Cartão</p>
           <p className="mt-1 text-xs leading-5 text-slate-400">Continue no Mercado Pago para pagar com cartão.</p>
