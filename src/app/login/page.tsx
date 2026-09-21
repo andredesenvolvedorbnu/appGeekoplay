@@ -6,6 +6,8 @@ import { Gamepad2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { traduzirErroAuth } from '@/lib/auth-errors';
 
+const PUBLIC_APP_URL='https://geekoplay.com';
+
 export default function LoginPage() {
   const supabase = useMemo(() => createClient(), []);
   const [email, setEmail] = useState('');
@@ -68,7 +70,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${location.origin}/auth/callback`
+        redirectTo: `${PUBLIC_APP_URL}/auth/callback`
       }
     });
     if (error) {
