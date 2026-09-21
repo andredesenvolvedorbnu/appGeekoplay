@@ -3,6 +3,7 @@
 import { useEffect,useMemo,useState } from 'react';
 import { CreditCard, Info, Loader2, Rocket, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { PaymentMethodDialog } from '@/components/payment-method-dialog';
 
 type Post={id:string;content:string|null;image_url:string|null;created_at:string;is_boosted:boolean;boosted_until:string|null};
 type Settings={boost_price_per_day:number;boost_payment_url:string|null};
