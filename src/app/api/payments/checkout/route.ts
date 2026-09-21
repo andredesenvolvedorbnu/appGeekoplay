@@ -12,6 +12,12 @@ export async function POST(request:Request){
     const {data:{user},error:userError}=await supabase.auth.getUser();
     if(userError||!user)return NextResponse.json({error:'Sessão inválida.'},{status:401});
 
+    const {data:userProfile}=await supabase.from('profiles').select('display_name').eq('id',user.id).maybeSingle();
+    const displayName=String(userProfile?.display_name||'Geek User').trim();
+    const nameParts=displayName.split(/\s+/).filter(Boolean);
+    const firstName=nameParts[0]||'Geek';
+    const lastName=nameParts.slice(1).join(' ')||'Play';
+
     const body=await request.json() as Partial<CheckoutBody>;
     const kind=body.kind;
     const requestId=String(body.requestId||'');
@@ -54,7 +60,7 @@ export async function POST(request:Request){
           transaction_amount:Number(amount.toFixed(2)),
           description:title,
           payment_method_id:'pix',
-          payer:user.email?{email:user.email,identification:{type:'CPF',number:payerDocument}}:undefined,
+          payer:user.email?{email:user.email,first_name:firstName,last_name:lastName,identification:{type:'CPF',number:payerDocument}}:undefined,
           external_reference:externalReference,
           notification_url:`${origin}/api/payments/webhook`,
           metadata:{kind,request_id:requestId,user_id:user.id}
@@ -64,7 +70,12 @@ export async function POST(request:Request){
       const payment=await paymentResponse.json();
       if(!paymentResponse.ok){
         console.error('Mercado Pago Pix error',payment);
-        return NextResponse.json({error:'Não foi possível gerar o Pix no Mercado Pago.'},{status:502});
+        const cause=Array.isArray(payment?.cause)&&payment.cause.length?payment.cause[0]:null;
+        const detail=String(cause?.description||cause?.code||payment?.message||payment?.error||'').slice(0,180);
+        return NextResponse.json({
+          error:'Não foi possível gerar o Pix no Mercado Pago.',
+          detail:detail||undefined
+        },{status:502});
       }
       const transactionData=payment?.point_of_interaction?.transaction_data||{};
       const table=kind==='premium'?'premium_requests':'boost_requests';
