@@ -29,6 +29,7 @@ export function PremiumClient(){
  const [loading,setLoading]=useState(true);
  const [working,setWorking]=useState(false);
  const [message,setMessage]=useState('');
+ const [paymentRequestId,setPaymentRequestId]=useState<string|null>(null);
 
  async function load(){
   const {data:{user}}=await supabase.auth.getUser();if(!user)return;
