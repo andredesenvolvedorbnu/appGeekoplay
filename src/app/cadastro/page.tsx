@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { traduzirErroAuth } from '@/lib/auth-errors';
 
+const PUBLIC_APP_URL='https://geekoplay.com';
+
 export default function CadastroPage() {
   const supabase = useMemo(() => createClient(), []);
   const [name, setName] = useState('');
@@ -27,7 +29,7 @@ export default function CadastroPage() {
       password,
       options: {
         data: { display_name: name },
-        emailRedirectTo: `${location.origin}/auth/callback`
+        emailRedirectTo: `${PUBLIC_APP_URL}/auth/callback`
       }
     });
 
@@ -50,7 +52,7 @@ export default function CadastroPage() {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: signupEmail,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` }
+      options: { emailRedirectTo: `${PUBLIC_APP_URL}/auth/callback` }
     });
     setResending(false);
     if (error) {
