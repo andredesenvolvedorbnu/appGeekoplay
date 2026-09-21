@@ -113,5 +113,6 @@ export function PremiumClient(){
     {message&&<p className="mt-3 text-sm text-slate-300">{message}</p>}
    </section>
   </div>
+  <PaymentMethodDialog open={Boolean(paymentRequestId)} kind="premium" requestId={paymentRequestId} amount={Number(request?.amount||selected?.price||0)} title={request?.plan_name||selected?.name||'GeekoPlay PRO'} onClose={()=>{setPaymentRequestId(null);void load()}} onApproved={()=>void load()}/>
  </div>
 }
