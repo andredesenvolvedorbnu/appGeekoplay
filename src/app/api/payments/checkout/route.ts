@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-type CheckoutBody={kind:'premium'|'boost';requestId:string};
+type CheckoutBody={kind:'premium'|'boost';requestId:string;method?:'pix'|'card'|'boleto'};
 
 export async function POST(request:Request){
   try{
@@ -15,7 +15,8 @@ export async function POST(request:Request){
     const body=await request.json() as Partial<CheckoutBody>;
     const kind=body.kind;
     const requestId=String(body.requestId||'');
-    if((kind!=='premium'&&kind!=='boost')||!requestId)return NextResponse.json({error:'Solicitação inválida.'},{status:400});
+    const method=body.method||'card';
+    if((kind!=='premium'&&kind!=='boost')||!requestId||!['pix','card','boleto'].includes(method))return NextResponse.json({error:'Solicitação inválida.'},{status:400});
 
     let amount=0;
     let title='';
@@ -39,6 +40,50 @@ export async function POST(request:Request){
     const returnPath=kind==='premium'?'/premium':'/impulsionar';
     const externalReference=`${kind}:${requestId}`;
 
+    if(method==='pix'){
+      const paymentResponse=await fetch('https://api.mercadopago.com/v1/payments',{
+        method:'POST',
+        headers:{
+          Authorization:`Bearer ${token}`,
+          'Content-Type':'application/json',
+          'X-Idempotency-Key':crypto.randomUUID()
+        },
+        body:JSON.stringify({
+          transaction_amount:Number(amount.toFixed(2)),
+          description:title,
+          payment_method_id:'pix',
+          payer:user.email?{email:user.email}:undefined,
+          external_reference:externalReference,
+          notification_url:`${origin}/api/payments/webhook`,
+          metadata:{kind,request_id:requestId,user_id:user.id}
+        }),
+        cache:'no-store'
+      });
+      const payment=await paymentResponse.json();
+      if(!paymentResponse.ok){
+        console.error('Mercado Pago Pix error',payment);
+        return NextResponse.json({error:'Não foi possível gerar o Pix no Mercado Pago.'},{status:502});
+      }
+      const transactionData=payment?.point_of_interaction?.transaction_data||{};
+      const table=kind==='premium'?'premium_requests':'boost_requests';
+      await supabase.from(table).update({
+        payment_provider:'mercado_pago',
+        payment_id:String(payment.id||''),
+        payment_reference:String(payment.id||externalReference),
+        payment_status:String(payment.status||'pending'),
+        payment_updated_at:new Date().toISOString()
+      }).eq('id',requestId).eq('user_id',user.id);
+      return NextResponse.json({
+        mode:'pix',
+        paymentId:payment.id,
+        status:payment.status,
+        qrCode:transactionData.qr_code||null,
+        qrCodeBase64:transactionData.qr_code_base64||null,
+        ticketUrl:transactionData.ticket_url||null,
+        externalReference
+      });
+    }
+
     const mpResponse=await fetch('https://api.mercadopago.com/checkout/preferences',{
       method:'POST',
       headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
@@ -53,7 +98,10 @@ export async function POST(request:Request){
         },
         auto_return:'approved',
         metadata:{kind,request_id:requestId,user_id:user.id},
-        notification_url:`${origin}/api/payments/webhook`
+        notification_url:`${origin}/api/payments/webhook`,
+        payment_methods: method==='card'
+          ? {excluded_payment_types:[{id:'ticket'},{id:'bank_transfer'},{id:'debit_card'},{id:'prepaid_card'}]}
+          : {excluded_payment_types:[{id:'credit_card'},{id:'debit_card'},{id:'prepaid_card'},{id:'bank_transfer'}]}
       }),
       cache:'no-store'
     });
@@ -70,7 +118,7 @@ export async function POST(request:Request){
     const table=kind==='premium'?'premium_requests':'boost_requests';
     await supabase.from(table).update({payment_reference:String(mp.id||externalReference)}).eq('id',requestId).eq('user_id',user.id);
 
-    return NextResponse.json({checkoutUrl,preferenceId:mp.id,externalReference});
+    return NextResponse.json({mode:'redirect',method,checkoutUrl,preferenceId:mp.id,externalReference});
   }catch(error){
     console.error('Checkout error',error);
     return NextResponse.json({error:'Não foi possível iniciar o pagamento.'},{status:500});
