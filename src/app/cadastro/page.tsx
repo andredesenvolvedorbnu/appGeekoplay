@@ -27,7 +27,7 @@ export default function CadastroPage() {
       password,
       options: {
         data: { display_name: name },
-        emailRedirectTo: 'https://geekoplay.com/auth/callback'
+        emailRedirectTo: `${location.origin}/auth/callback`
       }
     });
 
@@ -50,7 +50,7 @@ export default function CadastroPage() {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: signupEmail,
-      options: { emailRedirectTo: 'https://geekoplay.com/auth/callback' }
+      options: { emailRedirectTo: `${location.origin}/auth/callback` }
     });
     setResending(false);
     if (error) {
