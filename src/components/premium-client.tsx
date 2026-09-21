@@ -3,6 +3,7 @@
 import { useEffect,useMemo,useState } from 'react';
 import { AlertTriangle, CalendarDays, Check, Crown, CreditCard, Info, Loader2, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { PaymentMethodDialog } from '@/components/payment-method-dialog';
 
 type Settings={premium_payment_url:string|null;pro_hides_ads:boolean};
 type Plan={id:string;name:string;price:number;duration_days:number;billing_months:number;description:string|null;payment_url:string|null;sort_order:number};
