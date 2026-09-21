@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+// Production credentials redeploy.
+
 type CheckoutBody={kind:'premium'|'boost';requestId:string;method?:'pix'|'card'|'boleto';payerDocument?:string};
 
 export async function POST(request:Request){
