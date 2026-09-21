@@ -7,6 +7,11 @@ const SUPABASE_KEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||process.env.NEXT_P
 type CookieToSet={name:string;value:string;options?:CookieOptions};
 
 export async function middleware(request:NextRequest){
+ const host=(request.headers.get('host')||'').toLowerCase().split(':')[0];
+ if(host==='app-geekoplay.vercel.app'||host==='www.geekoplay.com'){
+  const canonical=new URL(request.nextUrl.pathname+request.nextUrl.search,'https://geekoplay.com');
+  return NextResponse.redirect(canonical,308);
+ }
  let response=NextResponse.next({request});
  const supabase=createServerClient(SUPABASE_URL,SUPABASE_KEY,{cookies:{getAll:()=>request.cookies.getAll(),setAll:(cookiesToSet:CookieToSet[])=>{cookiesToSet.forEach(({name,value})=>request.cookies.set(name,value));response=NextResponse.next({request});cookiesToSet.forEach(({name,value,options})=>response.cookies.set(name,value,options))}}});
  const {data:{user}}=await supabase.auth.getUser();
