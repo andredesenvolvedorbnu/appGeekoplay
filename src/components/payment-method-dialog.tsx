@@ -28,9 +28,10 @@ export function PaymentMethodDialog({open,kind,requestId,amount,title,onClose,on
   const [pix,setPix]=useState<PixData|null>(null);
   const [copied,setCopied]=useState(false);
   const [approved,setApproved]=useState(false);
+  const [cpf,setCpf]=useState('');
 
   useEffect(()=>{
-    if(!open){setWorking(null);setError('');setPix(null);setCopied(false);setApproved(false)}
+    if(!open){setWorking(null);setError('');setPix(null);setCopied(false);setApproved(false);setCpf('')}
   },[open]);
 
   useEffect(()=>{
@@ -52,12 +53,14 @@ export function PaymentMethodDialog({open,kind,requestId,amount,title,onClose,on
   if(!open||!requestId)return null;
 
   async function pay(method:'pix'|'card'|'boleto'){
+    const document=cpf.replace(/\D/g,'');
+    if(method==='pix'&&document.length!==11){setError('Informe um CPF válido para gerar o Pix.');return}
     setWorking(method);setError('');
     try{
       const response=await fetch('/api/payments/checkout',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({kind,requestId,method})
+        body:JSON.stringify({kind,requestId,method,payerDocument:method==='pix'?document:undefined})
       });
       const data=await response.json();
       if(!response.ok){setError(data.error||'Não foi possível iniciar o pagamento.');return}
@@ -105,13 +108,8 @@ export function PaymentMethodDialog({open,kind,requestId,amount,title,onClose,on
       </div>
 
       {!pix&&!approved&&<div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <button onClick={()=>void pay('pix')} disabled={!!working} className="rounded-2xl border border-emerald-500/30 bg-emerald-500/8 p-4 text-left transition hover:border-emerald-400/60 disabled:opacity-60">
-          <QrCode className="text-emerald-300" size={24}/>
-          <p className="mt-3 font-black text-white">Pix</p>
-          <p className="mt-1 text-xs leading-5 text-slate-400">QR Code e Pix Copia e Cola aqui no GeekoPlay.</p>
-          {working==='pix'&&<Loader2 className="mt-3 animate-spin text-emerald-300" size={17}/>}
-        </button>
-        <button onClick={()=>void pay('card')} disabled={!!working} className="rounded-2xl border border-blue-500/30 bg-blue-500/8 p-4 text-left transition hover:border-blue-400/60 disabled:opacity-60">
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/8 p-4"><QrCode className="text-emerald-300" size={24}/><p className="mt-3 font-black text-white">Pix</p><p className="mt-1 text-xs leading-5 text-slate-400">QR Code e Pix Copia e Cola aqui no GeekoPlay.</p><input value={cpf} onChange={e=>setCpf(e.target.value)} inputMode="numeric" maxLength={14} placeholder="CPF do pagador" className="mt-3 w-full rounded-xl border border-geek-line bg-geek-panel px-3 py-2 text-xs text-white outline-none"/><button onClick={()=>void pay('pix')} disabled={!!working} className="mt-3 w-full rounded-xl bg-emerald-500/15 px-3 py-2 text-xs font-black text-emerald-200 disabled:opacity-60">{working==='pix'?'Gerando Pix...':'Gerar Pix'}</button></div><button onClick={()=>void pay('card')} disabled={!!working} className="rounded-2xl border border-blue-500/30 bg-blue-500/8 p-4 text-left transition hover:border-blue-400/60 disabled:opacity-60">
+ disabled={!!working} className="rounded-2xl border border-blue-500/30 bg-blue-500/8 p-4 text-left transition hover:border-blue-400/60 disabled:opacity-60">
           <CreditCard className="text-blue-300" size={24}/>
           <p className="mt-3 font-black text-white">Cartão</p>
           <p className="mt-1 text-xs leading-5 text-slate-400">Continue no Mercado Pago para pagar com cartão.</p>
