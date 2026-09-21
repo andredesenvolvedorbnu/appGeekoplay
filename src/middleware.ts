@@ -11,7 +11,7 @@ export async function middleware(request:NextRequest){
  const supabase=createServerClient(SUPABASE_URL,SUPABASE_KEY,{cookies:{getAll:()=>request.cookies.getAll(),setAll:(cookiesToSet:CookieToSet[])=>{cookiesToSet.forEach(({name,value})=>request.cookies.set(name,value));response=NextResponse.next({request});cookiesToSet.forEach(({name,value,options})=>response.cookies.set(name,value,options))}}});
  const {data:{user}}=await supabase.auth.getUser();
  const pathname=request.nextUrl.pathname;
- const publicRoute=pathname==='/bem-vindo'||pathname==='/login'||pathname==='/cadastro'||pathname==='/esqueci-senha'||pathname.startsWith('/auth');
+ const publicRoute=pathname==='/bem-vindo'||pathname==='/login'||pathname==='/cadastro'||pathname==='/esqueci-senha'||pathname.startsWith('/auth')||pathname.startsWith('/api');
 
  if(!user&&!publicRoute){const url=request.nextUrl.clone();url.pathname='/bem-vindo';url.search='';return NextResponse.redirect(url)}
  if(user&&(pathname==='/bem-vindo'||pathname==='/login'||pathname==='/cadastro'||pathname==='/esqueci-senha')){
@@ -21,4 +21,4 @@ export async function middleware(request:NextRequest){
  return response;
 }
 
-export const config={matcher:['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']};
+export const config={matcher:['/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']};
