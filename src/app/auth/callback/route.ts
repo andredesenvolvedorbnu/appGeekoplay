@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+const PUBLIC_APP_URL='https://geekoplay.com';
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const errorDescription = url.searchParams.get('error_description');
 
   if (errorDescription) {
-    const loginUrl = new URL('/login', url.origin);
+    const loginUrl = new URL('/login', PUBLIC_APP_URL);
     loginUrl.searchParams.set('error_description', errorDescription);
     return NextResponse.redirect(loginUrl);
   }
 
   if (!code) {
-    const loginUrl = new URL('/login', url.origin);
+    const loginUrl = new URL('/login', PUBLIC_APP_URL);
     loginUrl.searchParams.set('error_description', 'Não foi possível concluir o login. Tente novamente.');
     return NextResponse.redirect(loginUrl);
   }
@@ -33,5 +35,5 @@ export async function GET(request: Request) {
     .eq('id', data.user.id)
     .maybeSingle();
 
-  return NextResponse.redirect(new URL(profile?.role === 'admin' ? '/admin' : '/', url.origin));
+  return NextResponse.redirect(new URL(profile?.role === 'admin' ? '/admin' : '/', PUBLIC_APP_URL));
 }
