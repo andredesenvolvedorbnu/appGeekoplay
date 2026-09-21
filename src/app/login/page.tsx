@@ -68,7 +68,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://geekoplay.com/auth/callback'
+        redirectTo: `${location.origin}/auth/callback`
       }
     });
     if (error) {
