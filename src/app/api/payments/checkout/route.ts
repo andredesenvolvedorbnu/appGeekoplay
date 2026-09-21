@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-type CheckoutBody={kind:'premium'|'boost';requestId:string;method?:'pix'|'card'|'boleto'};
+type CheckoutBody={kind:'premium'|'boost';requestId:string;method?:'pix'|'card'|'boleto';payerDocument?:string};
 
 export async function POST(request:Request){
   try{
@@ -16,7 +16,9 @@ export async function POST(request:Request){
     const kind=body.kind;
     const requestId=String(body.requestId||'');
     const method=body.method||'card';
+    const payerDocument=String(body.payerDocument||'').replace(/\D/g,'');
     if((kind!=='premium'&&kind!=='boost')||!requestId||!['pix','card','boleto'].includes(method))return NextResponse.json({error:'Solicitação inválida.'},{status:400});
+    if(method==='pix'&&payerDocument.length!==11)return NextResponse.json({error:'Informe um CPF válido para gerar o Pix.'},{status:400});
 
     let amount=0;
     let title='';
@@ -52,7 +54,7 @@ export async function POST(request:Request){
           transaction_amount:Number(amount.toFixed(2)),
           description:title,
           payment_method_id:'pix',
-          payer:user.email?{email:user.email}:undefined,
+          payer:user.email?{email:user.email,identification:{type:'CPF',number:payerDocument}}:undefined,
           external_reference:externalReference,
           notification_url:`${origin}/api/payments/webhook`,
           metadata:{kind,request_id:requestId,user_id:user.id}
