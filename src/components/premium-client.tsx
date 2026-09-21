@@ -85,7 +85,7 @@ export function PremiumClient(){
   const {data,error}=await supabase.rpc('request_premium',{selected_plan:selected.id});
   if(error){setMessage(error.message.includes('PENDING')?'Você já possui uma solicitação Premium em análise.':error.message.includes('RENEWAL_NOT_OPEN')?'A renovação antecipada abre quando faltarem 30 dias para o vencimento.':error.message.includes('PLAN_NOT_FOUND')?'Este plano não está mais disponível. Escolha outro.':'Não foi possível criar a solicitação Premium.');setWorking(false);return}
   setWorking(false);
-  if(data)await startCheckout(String(data));
+  if(data)setPaymentRequestId(String(data));
   else{setMessage('Solicitação criada, mas não foi possível iniciar o checkout.');await load()}
  }
  async function cancel(){if(!request)return;setWorking(true);const {error}=await supabase.from('premium_requests').update({status:'cancelled'}).eq('id',request.id).eq('status','pending');setMessage(error?'Não foi possível cancelar a solicitação.':'Solicitação cancelada.');await load();setWorking(false)}
