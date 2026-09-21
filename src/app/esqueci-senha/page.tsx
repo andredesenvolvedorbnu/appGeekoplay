@@ -6,6 +6,8 @@ import { Gamepad2, Mail, ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { traduzirErroAuth } from '@/lib/auth-errors';
 
+const PUBLIC_APP_URL='https://geekoplay.com';
+
 export default function ForgotPasswordPage(){
   const supabase=useMemo(()=>createClient(),[]);
   const [email,setEmail]=useState('');
@@ -16,7 +18,7 @@ export default function ForgotPasswordPage(){
   async function submit(e:React.FormEvent){
     e.preventDefault();
     setLoading(true);setMessage('');setError('');
-    const {error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo:`${location.origin}/auth/redefinir-senha`});
+    const {error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo:`${PUBLIC_APP_URL}/auth/redefinir-senha`});
     setLoading(false);
     if(error){setError(traduzirErroAuth(error.message));return;}
     setMessage('Se existir uma conta com este e-mail, enviaremos as instruções para redefinir sua senha. Verifique também a caixa de spam.');
