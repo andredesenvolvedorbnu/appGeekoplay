@@ -46,8 +46,12 @@ export function FeedClient(){
 
  async function reload(showLoader=true){
   if(showLoader)setLoading(true);const {data:{user}}=await supabase.auth.getUser();setUserId(user?.id||null);
-  const {data:postRows}=await supabase.from('posts').select('id,author_id,content,image_url,video_url,category,post_type,card_data,is_boosted,boosted_until,created_at').order('created_at',{ascending:false}).limit(60);
-  const safe=(postRows||[]) as Post[];setPosts(safe);const ids=[...new Set(safe.map(p=>p.author_id))];const profileMap:Record<string,Profile>={};
+  const postFields='id,author_id,content,image_url,video_url,category,post_type,card_data,is_boosted,boosted_until,created_at';
+  const nowIso=new Date().toISOString();
+  const [{data:recentRows},{data:boostedRows}]=await Promise.all([supabase.from('posts').select(postFields).order('created_at',{ascending:false}).limit(60),supabase.from('posts').select(postFields).eq('is_boosted',true).or(`boosted_until.is.null,boosted_until.gt.${nowIso}`).limit(100)]);
+  const merged=new Map<string,Post>();
+  ([...(recentRows||[]),...(boostedRows||[])] as Post[]).forEach(post=>merged.set(post.id,post));
+  const safe=[...merged.values()];setPosts(safe);const ids=[...new Set(safe.map(p=>p.author_id))];const profileMap:Record<string,Profile>={};
   if(ids.length){const {data}=await supabase.from('profiles').select('id,display_name,username,avatar_url,level,xp').in('id',ids);(data||[]).forEach((p:Profile)=>profileMap[p.id]=p)}
   if(safe.length){const postIds=safe.map(p=>p.id);const [{data:likeRows},{data:commentRows}]=await Promise.all([supabase.from('likes').select('post_id,user_id').in('post_id',postIds),supabase.from('comments').select('id,post_id,author_id,content,created_at').in('post_id',postIds).order('created_at',{ascending:true})]);const counts:Record<string,number>={};const mine=new Set<string>();(likeRows||[]).forEach((l:{post_id:string;user_id:string})=>{counts[l.post_id]=(counts[l.post_id]||0)+1;if(user&&l.user_id===user.id)mine.add(l.post_id)});setLikes(counts);setLiked(mine);const grouped:Record<string,Comment[]>={};const cCounts:Record<string,number>={};const commentAuthors=new Set<string>();(commentRows||[]).forEach((c:Comment)=>{(grouped[c.post_id]||=[]).push(c);cCounts[c.post_id]=(cCounts[c.post_id]||0)+1;commentAuthors.add(c.author_id)});const missing=[...commentAuthors].filter(id=>!profileMap[id]);if(missing.length){const {data}=await supabase.from('profiles').select('id,display_name,username,avatar_url,level,xp').in('id',missing);(data||[]).forEach((p:Profile)=>profileMap[p.id]=p)}setComments(grouped);setCommentCounts(cCounts)}else{setLikes({});setLiked(new Set());setComments({});setCommentCounts({})}
   setProfiles(profileMap);if(showLoader)setLoading(false);
