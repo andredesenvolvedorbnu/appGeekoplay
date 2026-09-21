@@ -53,7 +53,7 @@ async function videoModerationFrames(file:File){
   const duration=Number.isFinite(video.duration)&&video.duration>0?video.duration:0;
   if(!duration)return[];
   const frames:string[]=[];
-  for(const ratio of [0.1,0.5,0.9]){
+  for(const ratio of [0.05,0.25,0.5,0.75,0.95]){
    const target=Math.min(Math.max(0,duration*ratio),Math.max(0,duration-0.08));
    await new Promise<void>((resolve,reject)=>{
     const timer=window.setTimeout(()=>reject(new Error('video seek timeout')),3500);
@@ -276,9 +276,13 @@ export function FeedClient(){
  async function saveCommentEdit(comment:Comment){
   if(!userId||comment.author_id!==userId)return;const text=editingCommentText.trim();if(!text){setMessage('O comentário não pode ficar vazio.');return}
   setCommentBusy(`edit:${comment.id}`);
-  const {error}=await supabase.from('comments').update({content:text,updated_at:new Date().toISOString()}).eq('id',comment.id).eq('author_id',userId);
-  if(error)setMessage('Não foi possível editar o comentário.');else{setEditingCommentId(null);setEditingCommentText('');await reload(false)}
-  setCommentBusy(null);
+  try{
+   const moderation=await checkModeration('comment',text,null,undefined,comment.post_id);
+   if(moderation.decision!=='allow'){showModeration(moderation);setMessage('A edição não foi salva porque precisa de revisão de segurança.');return}
+   const {error}=await supabase.from('comments').update({content:text,updated_at:new Date().toISOString()}).eq('id',comment.id).eq('author_id',userId);
+   if(error)setMessage('Não foi possível editar o comentário.');else{setEditingCommentId(null);setEditingCommentText('');await reload(false)}
+  }catch{setMessage('Não foi possível verificar a edição agora. O comentário original foi mantido.')}
+  finally{setCommentBusy(null)}
  }
  async function deleteComment(comment:Comment){
   if(!userId||comment.author_id!==userId||!window.confirm('Excluir este comentário permanentemente?'))return;
@@ -295,8 +299,14 @@ export function FeedClient(){
  async function saveEdit(){
   if(!editingPost||editingPost.author_id!==userId)return;
   if(!editContent.trim()&&!editingPost.image_url&&!editingPost.video_url){setMessage('A publicação precisa ter texto ou mídia.');return}
-  setEditing(true);const {error}=await supabase.from('posts').update({content:editContent.trim()||null,category:editCategory,updated_at:new Date().toISOString()}).eq('id',editingPost.id).eq('author_id',userId);
-  if(error)setMessage('Não foi possível editar a publicação.');else{setEditingPost(null);setMessage('Publicação atualizada.');await reload()}setEditing(false)
+  setEditing(true);
+  try{
+   const moderation=await checkModeration('post',editContent.trim(),null,editCategory);
+   if(moderation.decision!=='allow'){showModeration(moderation);setMessage('A edição não foi salva porque precisa de revisão de segurança.');return}
+   const {error}=await supabase.from('posts').update({content:editContent.trim()||null,category:editCategory,updated_at:new Date().toISOString()}).eq('id',editingPost.id).eq('author_id',userId);
+   if(error)setMessage('Não foi possível editar a publicação.');else{setEditingPost(null);setMessage('Publicação atualizada.');await reload()}
+  }catch{setMessage('Não foi possível verificar a edição agora. A publicação original foi mantida.')}
+  finally{setEditing(false)}
  }
  function storagePath(url:string|null){if(!url)return null;const marker='/storage/v1/object/public/posts/';const index=url.indexOf(marker);if(index<0)return null;try{return decodeURIComponent(url.slice(index+marker.length))}catch{return null}}
  async function deletePost(post:Post){
