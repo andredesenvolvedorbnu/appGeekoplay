@@ -63,7 +63,7 @@ export function PaymentMethodDialog({open,kind,requestId,amount,title,onClose,on
         body:JSON.stringify({kind,requestId,method,payerDocument:method==='pix'?document:undefined})
       });
       const data=await response.json();
-      if(!response.ok){setError(data.error||'Não foi possível iniciar o pagamento.');return}
+      if(!response.ok){setError([data.error,data.detail].filter(Boolean).join(' — ')||'Não foi possível iniciar o pagamento.');return}
       if(data.mode==='pix'){
         setPix({
           qrCode:data.qrCode||null,
