@@ -91,7 +91,7 @@ export async function POST(request:Request){
       payment_updated_at:new Date().toISOString()
     };
 
-    if(paymentStatus==='approved'&&requestRow.status==='pending')update.status='approved';
+    if(paymentStatus==='approved'&&requestRow.status!=='approved'&&requestRow.status!=='rejected')update.status='approved';
 
     const {error:updateError}=await supabase.from(table).update(update).eq('id',requestId);
     if(updateError){
