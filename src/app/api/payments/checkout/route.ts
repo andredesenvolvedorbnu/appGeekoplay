@@ -35,7 +35,7 @@ export async function POST(request:Request){
 
     if(!Number.isFinite(amount)||amount<=0)return NextResponse.json({error:'Valor de pagamento inválido.'},{status:400});
 
-    const origin=new URL(request.url).origin;
+    const origin='https://geekoplay.com';
     const returnPath=kind==='premium'?'/premium':'/impulsionar';
     const externalReference=`${kind}:${requestId}`;
 
@@ -63,7 +63,8 @@ export async function POST(request:Request){
       return NextResponse.json({error:'Não foi possível iniciar o checkout do Mercado Pago.'},{status:502});
     }
 
-    const checkoutUrl=mp.sandbox_init_point||mp.init_point;
+    const testCredential=/^TEST[-_]/i.test(token);
+    const checkoutUrl=testCredential?(mp.sandbox_init_point||mp.init_point):(mp.init_point||mp.sandbox_init_point);
     if(!checkoutUrl)return NextResponse.json({error:'O Mercado Pago não retornou a URL de pagamento.'},{status:502});
 
     const table=kind==='premium'?'premium_requests':'boost_requests';
