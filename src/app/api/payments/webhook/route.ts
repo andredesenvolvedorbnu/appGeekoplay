@@ -3,6 +3,8 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { SUPABASE_URL } from '@/lib/supabase/config';
 
+// Redeploy marker after production payment environment update.
+
 function safeEqualHex(a:string,b:string){
   try{
     const left=Buffer.from(a,'hex');
