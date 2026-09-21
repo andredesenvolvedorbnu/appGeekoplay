@@ -47,16 +47,29 @@ const items:GuideItem[]=[
   {
     id:'reacoes',
     title:'Reações nos comentários',
-    summary:'GG, HYPE, OP, LORE e F — a linguagem da comunidade.',
+    summary:'GG, HYPE, OP, LORE, AWW e F — a linguagem da comunidade.',
     details:[
       '🎮 GG: quando o comentário mandou bem.',
       '🔥 HYPE: para algo que te deixou empolgado.',
       '⚡ OP: quando a resposta foi forte demais, apelona ou simplesmente absurda de boa.',
       '🧠 LORE: quando alguém trouxe contexto, informação ou conhecimento sobre aquele universo.',
+      '🫶 AWW: para aquela resposta que bateu no lado fofo, carinhoso ou simplesmente ganhou você.',
       '💀 F: respeito ao momento triste, derrota ou situação digna de um clássico “F”.'
     ],
-    keywords:['comentário','reação','gg','hype','op','lore','f','emoji'],
+    keywords:['comentário','reação','gg','hype','op','lore','aww','carinho','fofo','f','emoji'],
     icon:MessageCircle
+  },
+  {
+    id:'mensagens',
+    title:'Mensagens privadas',
+    summary:'Converse no privado e reaja às mensagens sem quebrar o ritmo da conversa.',
+    details:[
+      'As mensagens privadas usam o mesmo conjunto de reações geek do restante do GeekoPlay.',
+      'Toque ou clique no botão de reação abaixo da mensagem para abrir GG, HYPE, OP, LORE, AWW e F.',
+      'As reações ficam visíveis apenas para quem participa daquela conversa.'
+    ],
+    keywords:['mensagem','mensagens','privado','chat','reação','aww','gg','hype','op','lore','f'],
+    href:'/mensagens',linkLabel:'Abrir mensagens',icon:MessageCircle
   },
   {
     id:'xp',
@@ -250,7 +263,7 @@ export function GuideClient(){
   {!query&&<section className="mt-4 overflow-x-auto pb-1">
    <div className="flex min-w-max gap-2">
     {[
-     ['XP e níveis','xp'],['Comentários','reacoes'],['Pulses','pulses'],['Geek Card','geek-card'],
+     ['XP e níveis','xp'],['Comentários','reacoes'],['Mensagens','mensagens'],['Pulses','pulses'],['Geek Card','geek-card'],
      ['Comunidades','comunidades'],['Eventos','eventos'],['PRO','pro'],['Impulsionar','impulsionamento']
     ].map(([label,id])=><button key={id} type="button" onClick={()=>{setOpen(id);document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'center'})}} className="rounded-full border border-geek-line bg-geek-panel px-3 py-2 text-xs font-bold text-slate-300 hover:border-orange-500/40 hover:text-orange-200">{label}</button>)}
    </div>
