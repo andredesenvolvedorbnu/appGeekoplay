@@ -18,6 +18,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const incomingEmail = params.get('email');
+    if (incomingEmail) setEmail(incomingEmail);
     const confirmationError = params.get('erro') === 'confirmacao';
     const oauthError = params.get('error_description') || params.get('error');
 
@@ -95,7 +97,7 @@ export default function LoginPage() {
         <form onSubmit={loginEmail} className="space-y-3">
           <input className="w-full rounded-xl bg-geek-soft border border-geek-line px-4 py-3 outline-none focus:border-geek-orange" placeholder="E-mail" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
           <input className="w-full rounded-xl bg-geek-soft border border-geek-line px-4 py-3 outline-none focus:border-geek-orange" placeholder="Senha" type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
-          <div className="text-right"><Link href="/esqueci-senha" className="text-xs font-semibold text-geek-orange hover:underline">Esqueci minha senha</Link></div>
+          <div className="text-right"><Link href={email.trim()?`/esqueci-senha?email=${encodeURIComponent(email.trim().toLowerCase())}`:'/esqueci-senha'} className="text-xs font-semibold text-geek-orange hover:underline">Esqueci minha senha</Link></div>
           {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
           <button disabled={loading} className="w-full rounded-xl bg-geek-orange py-3 font-black disabled:opacity-60">{loading ? 'Entrando...' : 'Entrar'}</button>
         </form>
