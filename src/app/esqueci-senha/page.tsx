@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Gamepad2, Mail, ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -14,6 +14,11 @@ export default function ForgotPasswordPage(){
   const [loading,setLoading]=useState(false);
   const [message,setMessage]=useState('');
   const [error,setError]=useState('');
+
+  useEffect(()=>{
+    const incomingEmail=new URLSearchParams(window.location.search).get('email');
+    if(incomingEmail)setEmail(incomingEmail);
+  },[]);
 
   async function submit(e:React.FormEvent){
     e.preventDefault();
