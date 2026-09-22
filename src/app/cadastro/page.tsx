@@ -13,6 +13,7 @@ export default function CadastroPage() {
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [existingAccount, setExistingAccount] = useState(false);
 
   async function signup(e: React.FormEvent) {
     e.preventDefault();
@@ -20,6 +21,7 @@ export default function CadastroPage() {
 
     setMessage('');
     setIsError(false);
+    setExistingAccount(false);
     setLoading(true);
 
     const cleanName = name.trim();
@@ -82,7 +84,8 @@ export default function CadastroPage() {
       setIsError(true);
 
       if (/já possui|already|registered|exists|duplicate/i.test(detail)) {
-        setMessage('Este e-mail já possui uma conta no GeekoPlay. Faça login ou recupere sua senha.');
+        setExistingAccount(true);
+        setMessage('Este e-mail já está cadastrado no GeekoPlay. Você pode entrar com sua senha ou redefini-la caso não se lembre.');
       } else {
         setMessage(traduzirErroAuth(detail));
       }
@@ -137,9 +140,24 @@ export default function CadastroPage() {
         </form>
 
         {message && (
-          <p className={`text-sm mt-4 ${isError ? 'text-red-400' : 'text-emerald-400'}`} role="status">
-            {message}
-          </p>
+          existingAccount ? (
+            <div className="mt-4 rounded-2xl border border-orange-500/25 bg-orange-500/10 p-4" role="alert">
+              <p className="text-sm font-bold text-orange-200">Este e-mail já possui uma conta.</p>
+              <p className="mt-1 text-sm leading-5 text-slate-300">{message}</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <Link href={`/login?email=${encodeURIComponent(email.trim().toLowerCase())}`} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-geek-orange px-4 py-2.5 text-sm font-black text-white">
+                  Entrar na minha conta
+                </Link>
+                <Link href={`/esqueci-senha?email=${encodeURIComponent(email.trim().toLowerCase())}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-geek-line bg-geek-soft px-4 py-2.5 text-sm font-bold text-slate-200">
+                  Redefinir senha
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <p className={`text-sm mt-4 ${isError ? 'text-red-400' : 'text-emerald-400'}`} role="status">
+              {message}
+            </p>
+          )
         )}
 
         <p className="mt-4 text-center text-xs leading-5 text-slate-500">
