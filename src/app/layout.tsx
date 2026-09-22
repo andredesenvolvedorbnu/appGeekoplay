@@ -25,8 +25,12 @@ export const metadata: Metadata = {
     telephone: false
   },
   icons: {
-    icon: '/icon.svg',
-    apple: '/icon.svg'
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+    ],
+    apple: '/icon-192.png'
   }
 };
 
