@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect,useMemo,useState } from 'react';
-import { ArrowLeft, AtSign, Camera, Heart, Loader2, Pencil, Search, Send, Share2, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeft, AtSign, Camera, Heart, Loader2, Pencil, Radio, Search, Send, Share2, Trash2, UserRound, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ImageCropper } from '@/components/image-cropper';
 import { PhotoSourcePicker } from '@/components/photo-source-picker';
@@ -28,6 +28,10 @@ export function CollectionItemDetailClient({itemId}:{itemId:string}){
  const [likeCount,setLikeCount]=useState(0);
  const [liked,setLiked]=useState(false);
  const [likeBusy,setLikeBusy]=useState(false);
+ const [shareOpen,setShareOpen]=useState(false);
+ const [shareCaption,setShareCaption]=useState('');
+ const [shareBusy,setShareBusy]=useState<'feed'|'pulse'|null>(null);
+ const [shareNotice,setShareNotice]=useState('');
 
  const [tagOpen,setTagOpen]=useState(false);
  const [tagQuery,setTagQuery]=useState('');
@@ -67,13 +71,54 @@ export function CollectionItemDetailClient({itemId}:{itemId:string}){
 
  function storagePath(url:string|null){if(!url)return null;const marker='/storage/v1/object/public/collection/';const index=url.indexOf(marker);if(index<0)return null;try{return decodeURIComponent(url.slice(index+marker.length))}catch{return null}}
 
- async function share(){
+ function openShare(){
   if(!item)return;
-  const url=`${window.location.origin}/colecao/${item.id}`;
-  if(navigator.share){
-   try{await navigator.share({title:item.title,text:`Veja este item da coleção no GeekoPlay: ${item.title}`,url});return}catch{}
-  }
-  try{await navigator.clipboard.writeText(url);setMessage('Link do item copiado.')}catch{setMessage('Não foi possível copiar o link.')}
+  setShareCaption('');
+  setShareNotice('');
+  setShareOpen(true);
+ }
+ async function publishToFeed(){
+  if(!item||!userId||shareBusy)return;
+  setShareBusy('feed');setShareNotice('');
+  const {error}=await supabase.from('posts').insert({
+   author_id:userId,
+   content:shareCaption.trim()||null,
+   image_url:item.image_url,
+   video_url:null,
+   category:item.category||'Colecionáveis',
+   post_type:'collection',
+   card_data:{
+    collection_item_id:item.id,
+    title:item.title,
+    category:item.category,
+    item_type:item.item_type,
+    status:item.status,
+    status_label:statusLabel(item.status),
+    notes:item.notes,
+    image_url:item.image_url
+   }
+  });
+  setShareBusy(null);
+  if(error){setShareNotice('Não foi possível publicar no Feed agora.');return}
+  setShareNotice('Publicado no Feed.');
+  window.setTimeout(()=>{setShareOpen(false);location.href='/'},450);
+ }
+ async function publishToPulse(){
+  if(!item||!userId||shareBusy)return;
+  if(!item.image_url){setShareNotice('Adicione uma foto ao item antes de publicar no Pulse.');return}
+  setShareBusy('pulse');setShareNotice('');
+  const {error}=await supabase.from('pulses').insert({
+   author_id:userId,
+   image_url:item.image_url,
+   caption:shareCaption.trim()||item.title,
+   fandom:item.category||item.item_type||'Coleção',
+   expires_at:new Date(Date.now()+24*60*60*1000).toISOString(),
+   collection_item_id:item.id
+  });
+  setShareBusy(null);
+  if(error){setShareNotice('Não foi possível publicar no Pulse agora.');return}
+  setShareNotice('Publicado no Pulse.');
+  window.setTimeout(()=>{setShareOpen(false);location.href='/'},450);
  }
  function sendToSomeone(){if(!item)return;location.href=`/mensagens?colecao=${encodeURIComponent(item.id)}`}
  async function toggleLike(){
@@ -167,7 +212,7 @@ export function CollectionItemDetailClient({itemId}:{itemId:string}){
    <Link href="/colecao" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white"><ArrowLeft size={16}/>Voltar</Link>
    <div className="grid grid-cols-2 gap-2 sm:flex">
     <button onClick={()=>void toggleLike()} disabled={likeBusy} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold sm:text-sm ${liked?'border-red-400/40 bg-red-500/10 text-red-300':'border-geek-line hover:bg-geek-soft'}`}><Heart size={16} fill={liked?'currentColor':'none'}/>{likeCount}</button>
-    <button onClick={share} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-geek-line px-3 py-2 text-xs font-bold hover:bg-geek-soft sm:text-sm"><Share2 size={16}/>Compartilhar</button>
+    <button onClick={openShare} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-geek-line px-3 py-2 text-xs font-bold hover:bg-geek-soft sm:text-sm"><Share2 size={16}/>Compartilhar</button>
     <button onClick={sendToSomeone} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-geek-line px-3 py-2 text-xs font-bold hover:bg-geek-soft sm:text-sm"><Send size={16}/>Enviar</button>
     <button onClick={()=>{setTagOpen(true);setTagNotice('')}} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-geek-orange px-3 py-2 text-xs font-black text-white sm:text-sm"><AtSign size={16}/>Marcar</button>
    </div>
@@ -191,6 +236,23 @@ export function CollectionItemDetailClient({itemId}:{itemId:string}){
   </article>
 
   <section className="rounded-2xl border border-geek-line bg-geek-panel p-4 sm:p-5"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Coleção de</p>{owner?<Link href={`/perfil/${owner.id}`} className="mt-3 flex max-w-md items-center gap-3 rounded-xl bg-geek-soft p-3"><div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600">{owner.avatar_url?<img src={owner.avatar_url} alt="" className="h-full w-full object-cover"/>:<UserRound size={18}/>}</div><div className="min-w-0"><p className="truncate text-sm font-black">{owner.display_name}</p><p className="truncate text-xs text-slate-500">@{owner.username||'geek'}{typeof owner.level==='number'?` · Nível ${owner.level}`:''}{owner.city?` · ${owner.city}`:''}</p></div></Link>:<p className="mt-3 text-sm text-slate-500">Perfil indisponível.</p>}</section>
+
+  {shareOpen&&<div className="fixed inset-0 z-[176] overflow-y-auto bg-black/80 p-3" role="dialog" aria-modal="true" aria-label="Compartilhar item da coleção">
+   <section className="mx-auto my-4 w-full max-w-lg rounded-3xl border border-geek-line bg-geek-panel p-4 shadow-2xl sm:my-10 sm:p-6">
+    <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-orange-500/10 text-geek-orange"><Share2 size={20}/></div><div className="min-w-0 flex-1"><h2 className="text-xl font-black">Compartilhar no GeekoPlay</h2><p className="mt-1 text-sm leading-5 text-slate-400">Publique este card no Feed ou no Pulse.</p></div><button onClick={()=>setShareOpen(false)} disabled={Boolean(shareBusy)} className="rounded-xl p-2 text-slate-400 hover:bg-geek-soft disabled:opacity-40" aria-label="Fechar"><X size={20}/></button></div>
+    <div className="mt-4 overflow-hidden rounded-2xl border border-orange-500/25 bg-black/15">
+     {item.image_url&&<div className="flex aspect-[16/10] items-center justify-center overflow-hidden bg-black/25"><img src={item.image_url} alt={item.title} className="h-full w-full object-contain object-center"/></div>}
+     <div className="p-4"><div className="flex flex-wrap gap-2"><span className="rounded-full bg-orange-500/10 px-2.5 py-1 text-[10px] font-bold text-orange-300">{statusLabel(item.status)}</span>{item.category&&<span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-slate-400">{item.category}</span>}{item.item_type&&<span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-slate-400">{item.item_type}</span>}</div><h3 className="mt-3 text-lg font-black">{item.title}</h3>{item.notes&&<p className="mt-2 line-clamp-3 text-sm leading-5 text-slate-400">{item.notes}</p>}</div>
+    </div>
+    <textarea value={shareCaption} onChange={e=>setShareCaption(e.target.value)} maxLength={500} placeholder="Escreva algo sobre este item (opcional)" className="mt-4 min-h-24 w-full resize-y rounded-xl border border-geek-line bg-geek-soft p-3 text-sm outline-none focus:border-geek-orange"/>
+    {shareNotice&&<p className="mt-3 rounded-xl border border-geek-line bg-geek-soft px-3 py-2.5 text-xs text-slate-300">{shareNotice}</p>}
+    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+     <button onClick={()=>void publishToFeed()} disabled={Boolean(shareBusy)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-geek-orange px-4 py-3 text-sm font-black text-white disabled:opacity-50"><Share2 size={17}/>{shareBusy==='feed'?'Publicando...':'Publicar no Feed'}</button>
+     <button onClick={()=>void publishToPulse()} disabled={Boolean(shareBusy)||!item.image_url} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-geek-line bg-geek-soft px-4 py-3 text-sm font-black disabled:opacity-40"><Radio size={17}/>{shareBusy==='pulse'?'Publicando...':'Publicar no Pulse'}</button>
+    </div>
+    {!item.image_url&&<p className="mt-2 text-xs text-slate-500">Pulse precisa de uma foto. O Feed aceita o card mesmo sem imagem.</p>}
+   </section>
+  </div>}
 
   {editOpen&&<div className="fixed inset-0 z-[175] overflow-y-auto bg-black/80 p-3" role="dialog" aria-modal="true" aria-label="Editar item da coleção">
    <section className="mx-auto my-4 w-full max-w-2xl rounded-3xl border border-geek-line bg-geek-panel p-4 shadow-2xl sm:my-8 sm:p-6">
