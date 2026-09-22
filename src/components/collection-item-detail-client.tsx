@@ -9,7 +9,12 @@ import { PhotoSourcePicker } from '@/components/photo-source-picker';
 
 type Item={id:string;owner_id:string;title:string;image_url:string|null;category:string|null;item_type:string|null;status:string;notes:string|null;created_at:string};
 type Profile={id:string;display_name:string;username:string|null;avatar_url:string|null;level?:number;city?:string|null};
-const statuses=['Tenho','Quero','Troca'];
+const statuses=[
+ {value:'owned',label:'Tenho'},
+ {value:'wanted',label:'Quero'},
+ {value:'trade',label:'Troca'}
+] as const;
+const statusLabel=(value:string)=>statuses.find(s=>s.value===value)?.label||value;
 const types=['Figure','Mangá','Card','Game','HQ','Colecionável','Outro'];
 
 export function CollectionItemDetailClient({itemId}:{itemId:string}){
@@ -34,7 +39,7 @@ export function CollectionItemDetailClient({itemId}:{itemId:string}){
  const [editTitle,setEditTitle]=useState('');
  const [editCategory,setEditCategory]=useState('');
  const [editType,setEditType]=useState('Figure');
- const [editStatus,setEditStatus]=useState('Tenho');
+ const [editStatus,setEditStatus]=useState('owned');
  const [editNotes,setEditNotes]=useState('');
  const [editFile,setEditFile]=useState<File|null>(null);
  const [editPreview,setEditPreview]=useState<string|null>(null);
@@ -171,7 +176,7 @@ export function CollectionItemDetailClient({itemId}:{itemId:string}){
   <article className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
    <section className="overflow-hidden rounded-3xl border border-geek-line bg-geek-panel"><div className="flex aspect-square items-center justify-center overflow-hidden bg-black/25">{item.image_url?<img src={item.image_url} alt={item.title} className="block h-auto max-h-full w-auto max-w-full object-contain object-center"/>:<span className="flex flex-col items-center gap-2 text-sm text-slate-500"><Camera size={24}/>Sem foto</span>}</div></section>
    <section className="rounded-3xl border border-geek-line bg-geek-panel p-5 sm:p-6">
-    <div className="flex flex-wrap gap-2"><span className="rounded-full bg-orange-500/10 px-2.5 py-1 text-xs text-orange-300">{item.category||'Geek'}</span><span className="rounded-full bg-geek-soft px-2.5 py-1 text-xs text-slate-300">{item.item_type||'Colecionável'}</span><span className="rounded-full bg-geek-soft px-2.5 py-1 text-xs text-slate-300">{item.status}</span></div>
+    <div className="flex flex-wrap gap-2"><span className="rounded-full bg-orange-500/10 px-2.5 py-1 text-xs text-orange-300">{item.category||'Geek'}</span><span className="rounded-full bg-geek-soft px-2.5 py-1 text-xs text-slate-300">{item.item_type||'Colecionável'}</span><span className="rounded-full bg-geek-soft px-2.5 py-1 text-xs text-slate-300">{statusLabel(item.status)}</span></div>
     <h1 className="mt-4 break-words text-2xl font-black sm:text-3xl">{item.title}</h1>
     {item.notes&&<p className="mt-5 whitespace-pre-wrap break-words text-sm leading-7 text-slate-300">{item.notes}</p>}
     <p className="mt-5 text-xs text-slate-500">Adicionado em {new Date(item.created_at).toLocaleDateString('pt-BR')}</p>
@@ -203,7 +208,7 @@ export function CollectionItemDetailClient({itemId}:{itemId:string}){
       <input value={editTitle} onChange={e=>setEditTitle(e.target.value)} placeholder="Nome do item" className="sm:col-span-2 min-w-0 rounded-xl border border-geek-line bg-geek-soft px-3 py-3 outline-none focus:border-geek-orange"/>
       <input value={editCategory} onChange={e=>setEditCategory(e.target.value)} placeholder="Categoria" className="min-w-0 rounded-xl border border-geek-line bg-geek-soft px-3 py-3 outline-none focus:border-geek-orange"/>
       <select value={editType} onChange={e=>setEditType(e.target.value)} className="min-w-0 rounded-xl border border-geek-line bg-geek-soft px-3 py-3">{types.map(t=><option key={t}>{t}</option>)}</select>
-      <select value={editStatus} onChange={e=>setEditStatus(e.target.value)} className="min-w-0 rounded-xl border border-geek-line bg-geek-soft px-3 py-3">{statuses.map(s=><option key={s}>{s}</option>)}</select>
+      <select value={editStatus} onChange={e=>setEditStatus(e.target.value)} className="min-w-0 rounded-xl border border-geek-line bg-geek-soft px-3 py-3">{statuses.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}</select>
       <textarea value={editNotes} onChange={e=>setEditNotes(e.target.value)} placeholder="Observações (opcional)" className="min-h-28 resize-y rounded-xl border border-geek-line bg-geek-soft px-3 py-3 outline-none focus:border-geek-orange sm:col-span-2"/>
       <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2"><button onClick={()=>setEditOpen(false)} className="order-2 min-h-11 rounded-xl border border-geek-line font-bold sm:order-1">Cancelar</button><button onClick={()=>void saveEdit()} disabled={editSaving||!editTitle.trim()} className="order-1 min-h-11 rounded-xl bg-geek-orange font-black text-white disabled:opacity-50 sm:order-2">{editSaving?'Salvando...':'Salvar alterações'}</button></div>
      </div>
