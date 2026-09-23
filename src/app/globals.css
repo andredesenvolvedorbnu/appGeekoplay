@@ -80,6 +80,35 @@ section > div[class*="aspect-[3/1]"] + div.relative > div:first-child > div:firs
   margin-top: -3.5rem;
 }
 
+/* A capa do perfil deve sempre ocupar 100% do banner, centralizada e sem faixas laterais.
+   Reforço defensivo para navegadores mobile/PWA que tratam dimensões intrínsecas de imagem de forma diferente. */
+section > div.group.relative[class*="aspect-[3/1]"] {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  overflow: hidden !important;
+}
+section > div.group.relative[class*="aspect-[3/1]"] > img[alt="Capa do perfil"] {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+}
+
+@media (max-width: 767px) {
+  section > div.group.relative[class*="aspect-[3/1]"] {
+    width: 100% !important;
+    min-height: 120px;
+    max-height: none;
+  }
+}
+
 @keyframes geekoplayKenBurns {
   0% { transform: scale(1); }
   100% { transform: scale(1.055); }
