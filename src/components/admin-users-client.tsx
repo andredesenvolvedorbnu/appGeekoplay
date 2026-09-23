@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect,useMemo,useState } from 'react';
-import { Gift,Loader2,Rocket,Search,Shield,ShieldOff,Trash2,X } from 'lucide-react';
+import { Copy,Gift,Link2,Loader2,Rocket,Search,Shield,ShieldOff,Trash2,Users,X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 type AdminUser={id:string;display_name:string;email:string;role:string;level:number;xp:number;is_pro:boolean;created_at:string};
 type UserPost={id:string;content:string|null;image_url:string|null;post_type:string;card_data:{title?:string}|null;created_at:string;is_boosted:boolean;boosted_until:string|null};
-type BusyAction='xp'|string|null;
+type ReferralSummary={code:string;referral_count:number;xp_earned:number;is_active?:boolean};
+type BusyAction='xp'|'referral'|string|null;
 
 const PROTECTED_EMAILS=new Set(['andresantos.deco@gmail.com','andresantos.deco2022@gmail.com','ingressoblu@gmail.com','contato.geekoplay@gmail.com']);
 
@@ -27,6 +28,8 @@ function PartnershipDialog({user,onClose,onUserUpdated}:{user:AdminUser;onClose:
  const [posts,setPosts]=useState<UserPost[]>([]);
  const [postDays,setPostDays]=useState<Record<string,number>>({});
  const [loadingPosts,setLoadingPosts]=useState(true);
+ const [loadingReferral,setLoadingReferral]=useState(true);
+ const [referral,setReferral]=useState<ReferralSummary|null>(null);
  const [busy,setBusy]=useState<BusyAction>(null);
  const [message,setMessage]=useState('');
 
@@ -44,6 +47,22 @@ function PartnershipDialog({user,onClose,onUserUpdated}:{user:AdminUser;onClose:
   return()=>{active=false};
  },[supabase,user.id]);
 
+ useEffect(()=>{
+  let active=true;
+  async function loadReferral(){
+   setLoadingReferral(true);
+   const {data,error}=await supabase.rpc('admin_get_referral_summary',{target_user:user.id});
+   if(!active)return;
+   if(!error){
+    const row=((data||[]) as ReferralSummary[])[0]||null;
+    setReferral(row);
+   }
+   setLoadingReferral(false);
+  }
+  void loadReferral();
+  return()=>{active=false};
+ },[supabase,user.id]);
+
  async function grantXp(){
   const amount=Math.max(1,Math.min(100000,Math.trunc(Number(xpAmount)||0)));
   if(!window.confirm(`Adicionar ${amount.toLocaleString('pt-BR')} XP para ${user.display_name}?`))return;
@@ -56,6 +75,30 @@ function PartnershipDialog({user,onClose,onUserUpdated}:{user:AdminUser;onClose:
    await onUserUpdated(user.id);
   }
   setBusy(null);
+ }
+
+ async function generateReferral(){
+  setBusy('referral');setMessage('');
+  const {data,error}=await supabase.rpc('admin_generate_referral_link',{target_user:user.id});
+  if(error){
+   setMessage('Não foi possível gerar o link de indicação.');
+  }else{
+   const row=((data||[]) as ReferralSummary[])[0]||null;
+   setReferral(row);
+   if(row?.code){
+    const link=`https://geekoplay.com/convite/${row.code}`;
+    try{await navigator.clipboard.writeText(link);setMessage('Link de indicação gerado e copiado. Cada novo cadastro válido rende +2 XP.');}
+    catch{setMessage('Link de indicação gerado. Cada novo cadastro válido rende +2 XP.');}
+   }
+  }
+  setBusy(null);
+ }
+
+ async function copyReferral(){
+  if(!referral?.code)return;
+  const link=`https://geekoplay.com/convite/${referral.code}`;
+  try{await navigator.clipboard.writeText(link);setMessage('Link de indicação copiado.');}
+  catch{setMessage(`Copie o link: ${link}`);}
  }
 
  async function promotePost(post:UserPost){
@@ -76,6 +119,11 @@ function PartnershipDialog({user,onClose,onUserUpdated}:{user:AdminUser;onClose:
   <div className="mx-auto my-4 w-full max-w-4xl rounded-3xl border border-geek-line bg-geek-panel p-4 shadow-2xl sm:my-8 sm:p-6">
    <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.18em] text-geek-orange">Parceria e influenciadores</p><h2 className="mt-1 text-xl font-black sm:text-2xl">{user.display_name}</h2><p className="mt-1 text-sm text-slate-400">Nível {user.level} · {user.xp.toLocaleString('pt-BR')} XP</p></div><button onClick={onClose} className="rounded-xl p-2 text-slate-400 hover:bg-geek-soft" aria-label="Fechar"><X size={20}/></button></div>
    {message&&<div className="mt-4 rounded-xl border border-geek-line bg-geek-soft px-4 py-3 text-sm text-slate-300">{message}</div>}
+
+   <section className="mt-5 rounded-2xl border border-geek-line bg-geek-bg p-4 sm:p-5">
+    <div className="flex items-center gap-2"><Link2 className="text-geek-orange" size={20}/><div><h3 className="font-black">Link de indicação</h3><p className="text-xs text-slate-500">O usuário recebe +2 XP por cada pessoa que entrar por este link e concluir um novo cadastro válido.</p></div></div>
+    {loadingReferral?<div className="mt-4 flex items-center gap-2 text-sm text-slate-400"><Loader2 className="animate-spin" size={16}/>Carregando indicação...</div>:referral?.code?<div className="mt-4 space-y-3"><div className="flex flex-col gap-2 sm:flex-row"><div className="min-w-0 flex-1 rounded-xl border border-geek-line bg-geek-soft px-3 py-2.5 text-sm text-slate-200 break-all">https://geekoplay.com/convite/{referral.code}</div><button onClick={()=>void copyReferral()} className="inline-flex items-center justify-center gap-2 rounded-xl border border-geek-line px-4 py-2.5 text-sm font-bold"><Copy size={16}/>Copiar</button></div><div className="grid gap-2 sm:grid-cols-2"><div className="rounded-xl border border-geek-line bg-geek-soft p-3"><p className="text-xs text-slate-500">Cadastros válidos</p><p className="mt-1 text-xl font-black">{Number(referral.referral_count||0).toLocaleString('pt-BR')}</p></div><div className="rounded-xl border border-geek-line bg-geek-soft p-3"><p className="text-xs text-slate-500">XP gerado por indicação</p><p className="mt-1 text-xl font-black text-geek-orange">+{Number(referral.xp_earned||0).toLocaleString('pt-BR')} XP</p></div></div><button onClick={()=>void generateReferral()} disabled={busy!==null} className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-2.5 text-sm font-black text-orange-300 disabled:opacity-50">{busy==='referral'?<Loader2 className="animate-spin" size={16}/>:<Link2 size={16}/>}Reativar / confirmar link</button></div>:<button onClick={()=>void generateReferral()} disabled={busy!==null} className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-geek-orange px-4 py-3 font-black text-white disabled:opacity-50">{busy==='referral'?<Loader2 className="animate-spin" size={17}/>:<Users size={17}/>}Gerar link de indicação</button>}
+   </section>
 
    <section className="mt-5 rounded-2xl border border-geek-line bg-geek-bg p-4 sm:p-5">
     <div className="flex items-center gap-2"><Gift className="text-geek-orange" size={20}/><div><h3 className="font-black">Conceder XP promocional</h3><p className="text-xs text-slate-500">O valor será somado ao XP atual. O crescimento normal do usuário continua funcionando.</p></div></div>
