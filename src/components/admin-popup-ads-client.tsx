@@ -1,0 +1,53 @@
+'use client';
+
+import { useEffect,useMemo,useState } from 'react';
+import { ExternalLink,ImagePlus,Loader2,Megaphone,Pause,Play,Save,Trash2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { PhotoSourcePicker } from '@/components/photo-source-picker';
+import { ImageCropper } from '@/components/image-cropper';
+
+type Ad={id:string;title:string;description:string|null;image_url:string|null;cta_label:string|null;cta_url:string|null;max_impressions_per_user_day:number;starts_at:string|null;ends_at:string|null;active:boolean;created_at:string};
+
+const blank={title:'',description:'',cta_label:'Saiba mais',cta_url:'',max_impressions_per_user_day:2,starts_at:'',ends_at:'',active:true};
+
+export function AdminPopupAdsClient(){
+ const supabase=useMemo(()=>createClient(),[]);
+ const [ads,setAds]=useState<Ad[]>([]);const [form,setForm]=useState(blank);const [file,setFile]=useState<File|null>(null);const [preview,setPreview]=useState<string|null>(null);const [cropSource,setCropSource]=useState<File|null>(null);const [saving,setSaving]=useState(false);const [loading,setLoading]=useState(true);const [message,setMessage]=useState('');
+ async function load(){const {data}=await supabase.from('ads').select('id,title,description,image_url,cta_label,cta_url,max_impressions_per_user_day,starts_at,ends_at,active,created_at').eq('placement','popup').order('created_at',{ascending:false});setAds((data||[]) as Ad[]);setLoading(false)}
+ useEffect(()=>{void load()},[supabase]);
+ function choose(f:File|null){setMessage('');if(!f)return;if(!['image/jpeg','image/png','image/webp'].includes(f.type)){setMessage('Use uma imagem JPG, PNG ou WEBP.');return}if(f.size>10*1024*1024){setMessage('A imagem deve ter no máximo 10 MB.');return}setCropSource(f)}
+ function confirmCrop(cropped:File,url:string){if(preview)URL.revokeObjectURL(preview);setFile(cropped);setPreview(url);setCropSource(null)}
+ async function upload(userId:string){if(!file)return null;const path=`${userId}/${crypto.randomUUID()}.webp`;const {error}=await supabase.storage.from('ads').upload(path,file,{contentType:'image/webp',upsert:false});if(error)throw error;return supabase.storage.from('ads').getPublicUrl(path).data.publicUrl}
+ async function save(){
+  setMessage('');if(!form.title.trim())return setMessage('Informe um título.');if(!form.cta_url.trim())return setMessage('Informe o site oficial do anúncio.');
+  try{new URL(form.cta_url)}catch{return setMessage('Informe uma URL válida começando com https://')}
+  if(!/^https:\/\//i.test(form.cta_url))return setMessage('Por segurança, use uma URL https://');
+  if(form.starts_at&&form.ends_at&&new Date(form.ends_at)<=new Date(form.starts_at))return setMessage('O término precisa ser depois do início.');
+  setSaving(true);let uploaded:string|null=null;
+  try{const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error('auth');uploaded=await upload(user.id);const {error}=await supabase.from('ads').insert({title:form.title.trim(),description:form.description.trim()||null,image_url:uploaded,cta_label:form.cta_label.trim()||'Saiba mais',cta_url:form.cta_url.trim(),ad_type:'promotion',placement:'popup',audience:'all',navigation_interval:1,cooldown_minutes:0,max_impressions_per_user_day:Math.max(1,Math.min(20,Number(form.max_impressions_per_user_day)||1)),display_seconds:0,starts_at:form.starts_at?new Date(form.starts_at).toISOString():null,ends_at:form.ends_at?new Date(form.ends_at).toISOString():null,active:form.active,has_promo_code:false,promo_code:null,promo_instructions:null,created_by:user.id});if(error)throw error;if(preview)URL.revokeObjectURL(preview);setPreview(null);setFile(null);setForm(blank);setMessage('Anúncio pop-up criado com sucesso.');await load()}catch{setMessage('Não foi possível criar o anúncio pop-up.')}finally{setSaving(false)}
+ }
+ async function toggle(ad:Ad){await supabase.from('ads').update({active:!ad.active}).eq('id',ad.id);await load()}
+ async function remove(ad:Ad){if(!window.confirm(`Excluir o anúncio “${ad.title}”?`))return;await supabase.from('ads').delete().eq('id',ad.id);await load()}
+ function status(ad:Ad){const now=Date.now();if(!ad.active)return'Pausado';if(ad.starts_at&&new Date(ad.starts_at).getTime()>now)return'Agendado';if(ad.ends_at&&new Date(ad.ends_at).getTime()<now)return'Expirado';return'Ativo'}
+ if(loading)return <div className="grid place-items-center py-24"><Loader2 className="animate-spin text-geek-orange"/></div>;
+ return <div className="mx-auto max-w-6xl space-y-5">
+  {cropSource&&<ImageCropper file={cropSource} aspect={16/9} outputWidth={1600} title="Ajustar imagem do pop-up" onCancel={()=>setCropSource(null)} onConfirm={confirmCrop}/>} 
+  <div><p className="text-sm font-bold text-geek-orange">DIVULGAÇÃO</p><h1 className="text-2xl font-black sm:text-3xl">Criar anúncio pop-up</h1><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">Crie uma campanha que aparece dentro do GeekoPlay. Você escolhe quantas vezes cada usuário pode vê-la por dia e para qual site o clique será enviado.</p></div>
+  <section className="rounded-2xl border border-geek-line bg-geek-panel p-4 sm:p-6">
+   <div className="grid gap-4 sm:grid-cols-2">
+    <label className="grid gap-1.5 text-sm"><b>Título</b><input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} maxLength={120} className="rounded-xl border border-geek-line bg-geek-soft px-3 py-3" placeholder="Ex.: Conheça a loja oficial"/></label>
+    <label className="grid gap-1.5 text-sm"><b>Texto do botão</b><input value={form.cta_label} onChange={e=>setForm({...form,cta_label:e.target.value})} maxLength={50} className="rounded-xl border border-geek-line bg-geek-soft px-3 py-3" placeholder="Saiba mais"/></label>
+    <label className="grid gap-1.5 text-sm sm:col-span-2"><b>Descrição</b><textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} maxLength={1200} className="min-h-24 rounded-xl border border-geek-line bg-geek-soft p-3" placeholder="Texto curto do anúncio..."/></label>
+    <label className="grid gap-1.5 text-sm sm:col-span-2"><b>Site oficial do anúncio</b><input value={form.cta_url} onChange={e=>setForm({...form,cta_url:e.target.value})} className="rounded-xl border border-geek-line bg-geek-soft px-3 py-3" placeholder="https://siteoficial.com.br"/><span className="text-[11px] text-slate-500">Ao clicar no anúncio, o usuário será levado para este endereço.</span></label>
+    <label className="grid gap-1.5 text-sm"><b>Máximo por usuário / dia</b><input type="number" min="1" max="20" value={form.max_impressions_per_user_day} onChange={e=>setForm({...form,max_impressions_per_user_day:Number(e.target.value)})} className="rounded-xl border border-geek-line bg-geek-soft px-3 py-3"/><span className="text-[11px] text-slate-500">Ex.: 2 = cada usuário poderá ver este anúncio no máximo 2 vezes no mesmo dia.</span></label>
+    <label className="flex items-center gap-3 rounded-xl border border-geek-line bg-geek-soft px-3 py-3 text-sm"><input type="checkbox" checked={form.active} onChange={e=>setForm({...form,active:e.target.checked})}/><span><b className="block">Ativar ao salvar</b><span className="text-xs text-slate-500">Você pode pausar depois.</span></span></label>
+    <label className="grid gap-1.5 text-sm"><b>Início da campanha</b><input type="datetime-local" value={form.starts_at} onChange={e=>setForm({...form,starts_at:e.target.value})} className="rounded-xl border border-geek-line bg-geek-soft px-3 py-3"/></label>
+    <label className="grid gap-1.5 text-sm"><b>Fim da campanha</b><input type="datetime-local" value={form.ends_at} onChange={e=>setForm({...form,ends_at:e.target.value})} className="rounded-xl border border-geek-line bg-geek-soft px-3 py-3"/></label>
+   </div>
+   <div className="mt-5"><div className="flex items-center justify-between gap-3"><div><b className="text-sm">Mídia do anúncio</b><p className="text-xs text-slate-500">JPG, PNG ou WEBP. O GeekoPlay ajusta o enquadramento sem deformar.</p></div><PhotoSourcePicker onSelect={choose} label="Selecionar imagem" className="inline-flex items-center gap-2 rounded-xl border border-geek-line px-3 py-2 text-xs font-bold"/></div>{preview?<div className="mt-3 flex aspect-[16/9] max-h-[420px] items-center justify-center overflow-hidden rounded-2xl border border-geek-line bg-black/30"><img src={preview} alt="Prévia do anúncio" className="h-full w-full object-contain object-center"/></div>:<div className="mt-3 grid aspect-[16/9] max-h-[420px] place-items-center rounded-2xl border border-dashed border-geek-line bg-geek-soft text-slate-500"><div className="text-center"><ImagePlus className="mx-auto mb-2"/><p className="text-sm font-semibold">Adicione a imagem do pop-up</p></div></div>}</div>
+   {message&&<p className="mt-4 rounded-xl border border-geek-line bg-geek-soft px-3 py-2.5 text-sm text-slate-300">{message}</p>}
+   <button onClick={()=>void save()} disabled={saving} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-geek-orange px-5 py-3 font-black text-white disabled:opacity-50 sm:w-auto"><Save size={17}/>{saving?'Criando...':'Criar anúncio pop-up'}</button>
+  </section>
+  <section className="rounded-2xl border border-geek-line bg-geek-panel p-4 sm:p-6"><div className="flex items-center gap-2"><Megaphone size={18} className="text-geek-orange"/><h2 className="font-black">Pop-ups criados</h2></div><div className="mt-4 space-y-3">{ads.length===0?<p className="py-6 text-center text-sm text-slate-500">Nenhum anúncio pop-up criado ainda.</p>:ads.map(ad=><article key={ad.id} className="flex flex-col gap-3 rounded-2xl border border-geek-line bg-geek-soft p-4 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><b className="truncate">{ad.title}</b><span className="rounded-full bg-black/20 px-2 py-1 text-[10px] text-slate-400">{status(ad)}</span></div><p className="mt-1 text-xs text-slate-500">Máx. {ad.max_impressions_per_user_day}x por usuário/dia</p>{ad.cta_url&&<a href={ad.cta_url} target="_blank" rel="noreferrer" className="mt-2 inline-flex max-w-full items-center gap-1 truncate text-xs text-orange-300"><ExternalLink size={13}/>{ad.cta_url}</a>}</div><div className="flex gap-2"><button onClick={()=>void toggle(ad)} className="inline-flex items-center gap-1 rounded-xl border border-geek-line px-3 py-2 text-xs font-bold">{ad.active?<Pause size={14}/>:<Play size={14}/>} {ad.active?'Pausar':'Ativar'}</button><button onClick={()=>void remove(ad)} className="rounded-xl border border-red-500/30 px-3 py-2 text-red-300" aria-label="Excluir anúncio"><Trash2 size={15}/></button></div></article>)}</div></section>
+ </div>
+}
