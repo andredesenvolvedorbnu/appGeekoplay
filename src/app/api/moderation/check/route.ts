@@ -35,6 +35,7 @@ type ModelDecision={
  summary:string;
  user_reasons:string[];
  confidence:number;
+ technicalFallback?:boolean;
 };
 
 const MODEL='openai/gpt-5.6-luna';
@@ -75,15 +76,14 @@ function responseText(data:any){
  return '';
 }
 
-function fallbackDecision(mediaKind:string):ModelDecision{
+function technicalFallback():ModelDecision{
  return {
-  decision:'review',
+  decision:'allow',
   categories:[],
-  summary:mediaKind==='none'
-   ?'A análise automática ficou temporariamente indisponível e o conteúdo foi encaminhado para revisão.'
-   :'A mídia não pôde ser validada automaticamente e foi encaminhada para revisão.',
-  user_reasons:['Verificação automática indisponível no momento'],
-  confidence:0
+  summary:'A verificação automática ficou temporariamente indisponível. O conteúdo não será tratado como suspeito por causa de uma falha técnica.',
+  user_reasons:[],
+  confidence:0,
+  technicalFallback:true
  };
 }
 
@@ -135,12 +135,25 @@ export async function POST(request:Request){
   if(previous?.decision==='approved'){
    return NextResponse.json({decision:'allow',override:true,fingerprint});
   }
+
+  const previousCategories=Array.isArray(previous?.detected_categories)?previous.detected_categories:[];
+  const previousWasTechnicalFallback=Boolean(
+   previous&&
+   previous.decision==='pending_review'&&
+   previousCategories.length===0&&
+   /verifica[cç][aã]o autom[aá]tica indispon[ií]vel|an[aá]lise autom[aá]tica ficou temporariamente indispon[ií]vel|m[ií]dia n[aã]o p[oô]de ser validada automaticamente/i.test(String(previous.rule_summary||''))
+  );
+
+  if(previousWasTechnicalFallback){
+   return NextResponse.json({decision:'allow',technicalFallback:true,fingerprint,existing:true});
+  }
+
   if(previous&&['blocked','pending_review','rejected'].includes(previous.decision)){
    return NextResponse.json({
     decision:previous.decision==='pending_review'?'review':'block',
     caseId:previous.id,
-    categories:previous.detected_categories||[],
-    reasons:(previous.detected_categories||[]).map((key:string)=>CATEGORY_LABELS[key as Category]||key),
+    categories:previousCategories,
+    reasons:previousCategories.map((key:string)=>CATEGORY_LABELS[key as Category]||key),
     summary:previous.rule_summary||'Este conteúdo já possui uma decisão de moderação.',
     fingerprint,
     existing:true
@@ -151,7 +164,7 @@ export async function POST(request:Request){
   const token=process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN;
 
   if(!token||(mediaKind!=='none'&&images.length===0)){
-   decision=fallbackDecision(mediaKind);
+   decision=technicalFallback();
   }else{
    const contextText=[
     'Classifique este conteúdo enviado por um usuário do GeekoPlay, uma rede social de cultura geek, games, anime, cosplay, HQs e eventos.',
@@ -208,7 +221,7 @@ export async function POST(request:Request){
 
    if(!gateway.ok){
     console.error('Moderation gateway error',gateway.status,await gateway.text());
-    decision=fallbackDecision(mediaKind);
+    decision=technicalFallback();
    }else{
     const raw=await gateway.json();
     const parsed=JSON.parse(responseText(raw)||'{}') as ModelDecision;
@@ -220,6 +233,7 @@ export async function POST(request:Request){
    return NextResponse.json({
     decision:'allow',
     categories:decision.categories,
+    technicalFallback:Boolean(decision.technicalFallback),
     fingerprint
    });
   }
@@ -245,7 +259,7 @@ export async function POST(request:Request){
     rule_summary:publicReasons.join(' · ')||decision.summary,
     model_summary:String(decision.summary||'').slice(0,1200),
     evidence_preview:preview,
-    model_name:token?MODEL:'fallback'
+    model_name:MODEL
    })
    .select('id')
    .single();
@@ -265,6 +279,6 @@ export async function POST(request:Request){
   });
  }catch(error){
   console.error('Moderation check error',error);
-  return NextResponse.json({error:'Não foi possível verificar este conteúdo.'},{status:500});
+  return NextResponse.json({decision:'allow',technicalFallback:true,error:'Moderação temporariamente indisponível.'});
  }
 }
