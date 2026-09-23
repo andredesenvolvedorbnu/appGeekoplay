@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Montserrat } from 'next/font/google';
 import { PwaRegister } from '@/components/pwa-register';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { GlobalPhotoSourceGuard } from '@/components/global-photo-source-guard';
 import './globals.css';
 
 const montserrat = Montserrat({
@@ -44,7 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR" suppressHydrationWarning className={montserrat.variable}>
       <head><script dangerouslySetInnerHTML={{__html:themeInit}}/></head>
-      <body><PwaRegister/><ThemeToggle/>{children}</body>
+      <body><PwaRegister/><ThemeToggle/><GlobalPhotoSourceGuard/>{children}</body>
     </html>
   );
 }
