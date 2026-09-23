@@ -4,7 +4,7 @@ import { BarChart3,CalendarDays,ClipboardList,Crown,DollarSign,Flag,Gamepad2,Hom
 import { createClient } from '@/lib/supabase/server';
 
 const menu=[
- ['Visão geral','/admin',Home],['Usuários','/admin/usuarios',Users],['Benefícios & Embaixadores','/admin/beneficios',Crown],['Eventos','/admin/eventos',CalendarDays],['Feedbacks','/admin/feedbacks',ClipboardList],['Notícias','/admin/noticias',Newspaper],['Anúncios','/admin/anuncios',Megaphone],['Monetização','/admin/monetizacao',DollarSign],['Mercado Geek','/admin/mercado',Store],['Moderação automática','/admin/moderacao',ShieldAlert],['Denúncias','/admin/denuncias',Flag],['Relatórios','/admin/relatorios',BarChart3]
+ ['Visão geral','/admin',Home],['Usuários','/admin/usuarios',Users],['Benefícios & Embaixadores','/admin/beneficios',Crown],['Eventos','/admin/eventos',CalendarDays],['Feedbacks','/admin/feedbacks',ClipboardList],['Notícias','/admin/noticias',Newspaper],['Criar anúncio pop-up','/admin/anuncios-popup',Megaphone],['Anúncios avançados','/admin/anuncios',Megaphone],['Monetização','/admin/monetizacao',DollarSign],['Mercado Geek','/admin/mercado',Store],['Moderação automática','/admin/moderacao',ShieldAlert],['Denúncias','/admin/denuncias',Flag],['Relatórios','/admin/relatorios',BarChart3]
 ] as const;
 
 export default async function AdminLayout({children}:{children:React.ReactNode}){
