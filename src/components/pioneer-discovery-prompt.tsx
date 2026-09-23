@@ -15,6 +15,7 @@ type Person={
   favorite_categories:string[];
   level:number;
   pioneer_number:number|null;
+  created_at:string;
 };
 
 type CurrentProfile={
@@ -84,18 +85,23 @@ export function PioneerDiscoveryPrompt(){
       supabase.from('profiles')
         .select('id,display_name,username,avatar_url,bio,city,favorite_categories,level,pioneer_number,created_at')
         .neq('id',profile.id)
-        .order('created_at',{ascending:true})
+        .order('created_at',{ascending:false})
         .limit(80),
       supabase.from('follows').select('following_id').eq('follower_id',profile.id)
     ]);
     const followed=new Set((follows||[]).map(row=>row.following_id as string));
     setFollowing(followed);
+    const now=Date.now();
     const ranked=((rows||[]) as Person[]).sort((a,b)=>{
+      const aAgeHours=Math.max(0,(now-new Date(a.created_at).getTime())/36e5);
+      const bAgeHours=Math.max(0,(now-new Date(b.created_at).getTime())/36e5);
+      const aRecent=aAgeHours<=168?1:0;
+      const bRecent=bAgeHours<=168?1:0;
       const aShared=overlap(profile.favorite_categories||[],a.favorite_categories||[]).length;
       const bShared=overlap(profile.favorite_categories||[],b.favorite_categories||[]).length;
       const aCity=!!profile.city&&!!a.city&&profile.city.toLowerCase()===a.city.toLowerCase()?1:0;
       const bCity=!!profile.city&&!!b.city&&profile.city.toLowerCase()===b.city.toLowerCase()?1:0;
-      return bShared-aShared||bCity-aCity||(a.pioneer_number||9999)-(b.pioneer_number||9999);
+      return bRecent-aRecent||new Date(b.created_at).getTime()-new Date(a.created_at).getTime()||bShared-aShared||bCity-aCity||(a.pioneer_number||9999)-(b.pioneer_number||9999);
     });
     setPeople(ranked.slice(0,12));
   }
@@ -144,7 +150,7 @@ export function PioneerDiscoveryPrompt(){
         </section>
       : <section className="w-full max-w-5xl rounded-3xl border border-geek-line bg-geek-panel shadow-2xl">
           <div className="flex items-start justify-between gap-3 border-b border-geek-line p-4 sm:p-5">
-            <div><p className="text-xs font-black uppercase tracking-[.2em] text-geek-orange">Encontre sua galera</p><h2 className="mt-1 text-xl font-black sm:text-2xl">Geeks para conhecer</h2><p className="mt-1 text-sm text-slate-400">Sugestões com base no que vocês têm em comum.</p></div>
+            <div><p className="text-xs font-black uppercase tracking-[.2em] text-geek-orange">Encontre sua galera</p><h2 className="mt-1 text-xl font-black sm:text-2xl">Geeks para conhecer</h2><p className="mt-1 text-sm text-slate-400">Novos membros aparecem primeiro; interesses e cidade ajudam a refinar as sugestões.</p></div>
             <button onClick={()=>setOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-geek-soft" aria-label="Fechar"><X size={20}/></button>
           </div>
           <div className="max-h-[72vh] overflow-y-auto p-4 sm:p-5">
@@ -154,6 +160,7 @@ export function PioneerDiscoveryPrompt(){
                   const shared=overlap(current.favorite_categories||[],person.favorite_categories||[]);
                   const sameCity=!!current.city&&!!person.city&&current.city.toLowerCase()===person.city.toLowerCase();
                   const isFollowing=following.has(person.id);
+                  const isNew=Date.now()-new Date(person.created_at).getTime()<=7*24*60*60*1000;
                   return <article key={person.id} className="rounded-2xl border border-geek-line bg-geek-soft p-4">
                     <div className="flex items-start gap-3">
                       <Link href={`/perfil/${person.id}`} onClick={()=>setOpen(false)} className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-purple-600">
@@ -162,7 +169,10 @@ export function PioneerDiscoveryPrompt(){
                       <div className="min-w-0 flex-1">
                         <Link href={`/perfil/${person.id}`} onClick={()=>setOpen(false)} className="block truncate font-black hover:text-orange-300">{person.display_name}</Link>
                         <p className="truncate text-xs text-slate-500">@{person.username||'geek'} · Nível {person.level}</p>
-                        {person.pioneer_number&&<span className="mt-1 inline-flex rounded-full bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-300">Pioneiro #{person.pioneer_number}</span>}
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {isNew&&<span className="inline-flex rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-300">Novo por aqui</span>}
+                          {person.pioneer_number&&<span className="inline-flex rounded-full bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-300">Pioneiro #{person.pioneer_number}</span>}
+                        </div>
                       </div>
                     </div>
                     {person.bio&&<p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-400">{person.bio}</p>}
