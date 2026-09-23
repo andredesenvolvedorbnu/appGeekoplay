@@ -1,0 +1,22 @@
+'use client';
+
+import { useEffect,useMemo,useState } from 'react';
+import { Crown, Loader2, Search, ShieldCheck, Sparkles } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+
+type UserRow={id:string;display_name:string;email:string;is_pro:boolean;is_ambassador:boolean;level:number;xp:number;pro_expires_at:string|null};
+
+export function AdminBenefitsClient(){
+ const supabase=useMemo(()=>createClient(),[]);const [users,setUsers]=useState<UserRow[]>([]);const [search,setSearch]=useState('');const [working,setWorking]=useState<string|null>(null);const [message,setMessage]=useState('');
+ async function load(){const {data,error}=await supabase.rpc('admin_list_benefit_profiles');if(!error)setUsers((data||[]) as UserRow[])}
+ useEffect(()=>{void load()},[supabase]);
+ const filtered=users.filter(u=>`${u.display_name} ${u.email}`.toLowerCase().includes(search.toLowerCase()));
+ async function setAmbassador(u:UserRow){setWorking(u.id);setMessage('');const {error}=await supabase.rpc('admin_set_ambassador',{target_user:u.id,enabled:!u.is_ambassador});setMessage(error?'Não foi possível alterar o status de Embaixador.':!u.is_ambassador?'Usuário promovido a Embaixador. Ele verá um aviso no próximo acesso.':'Status de Embaixador removido.');await load();setWorking(null)}
+ async function setPremium(u:UserRow){setWorking(u.id);setMessage('');const {error}=await supabase.rpc('admin_set_premium',{target_user:u.id,enabled:!u.is_pro,duration_days:30});setMessage(error?'Não foi possível alterar o Premium.':!u.is_pro?'Premium ativado por 30 dias. O usuário verá um aviso no próximo acesso.':'Premium encerrado.');await load();setWorking(null)}
+ async function changeLevel(u:UserRow,value:number){const next=Math.max(1,Math.min(10,value));setWorking(u.id);setMessage('');const {error}=await supabase.rpc('admin_set_user_level',{target_user:u.id,new_level:next});setMessage(error?'Não foi possível alterar o nível.':`Nível de ${u.display_name} atualizado para ${next}.`);await load();setWorking(null)}
+ return <div className="space-y-4">
+  {message&&<div className="rounded-xl border border-geek-line bg-geek-panel px-4 py-3 text-sm text-slate-300">{message}</div>}
+  <label className="flex items-center gap-2 rounded-xl border border-geek-line bg-geek-panel px-3 py-2.5 text-slate-400"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar usuário" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none"/></label>
+  <div className="grid gap-3">{filtered.map(u=><article key={u.id} className="rounded-2xl border border-geek-line bg-geek-panel p-4"><div className="flex flex-col gap-4 xl:flex-row xl:items-center"><div className="min-w-0 flex-1"><h3 className="font-black">{u.display_name}</h3><p className="text-xs text-slate-500">{u.email}</p><div className="mt-2 flex flex-wrap gap-2">{u.is_ambassador&&<span className="rounded-full bg-violet-500/10 px-2 py-1 text-[10px] font-bold text-violet-300">EMBAIXADOR</span>}{u.is_pro&&<span className="rounded-full bg-orange-500/10 px-2 py-1 text-[10px] font-bold text-orange-300">PREMIUM</span>}<span className="rounded-full bg-geek-soft px-2 py-1 text-[10px]">Nível {u.level}</span></div></div><div className="flex flex-wrap gap-2"><button onClick={()=>void setAmbassador(u)} disabled={working===u.id} className="inline-flex items-center gap-2 rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-black text-violet-200 disabled:opacity-50">{working===u.id?<Loader2 className="animate-spin" size={14}/>:<ShieldCheck size={14}/>} {u.is_ambassador?'Remover Embaixador':'Tornar Embaixador'}</button><button onClick={()=>void setPremium(u)} disabled={working===u.id} className="inline-flex items-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs font-black text-orange-200 disabled:opacity-50"><Crown size={14}/>{u.is_pro?'Encerrar Premium':'Dar Premium 30 dias'}</button><label className="flex items-center gap-2 rounded-xl border border-geek-line bg-geek-soft px-3 py-2 text-xs"><Sparkles size={14}/><span>Nível</span><select value={u.level} onChange={e=>void changeLevel(u,Number(e.target.value))} disabled={working===u.id} className="bg-transparent font-bold outline-none">{Array.from({length:10},(_,i)=><option key={i+1} value={i+1} className="bg-geek-panel">{i+1}</option>)}</select></label></div></div></article>)}</div>
+ </div>;
+}
