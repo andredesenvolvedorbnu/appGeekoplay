@@ -26,6 +26,9 @@ export default function CadastroPage() {
 
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
+    const referralCode = typeof window === 'undefined'
+      ? ''
+      : String(new URLSearchParams(window.location.search).get('ref') || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 24);
 
     try {
       setMessage('Criando sua conta...');
@@ -69,6 +72,10 @@ export default function CadastroPage() {
         signInError = result.error;
 
         if (!signInError && result.data.session) {
+          if (referralCode) {
+            const { error: referralError } = await supabase.rpc('claim_referral_for_self', { p_code: referralCode });
+            if (referralError) console.error('referral claim failed', referralError);
+          }
           window.location.replace('/');
           return;
         }
