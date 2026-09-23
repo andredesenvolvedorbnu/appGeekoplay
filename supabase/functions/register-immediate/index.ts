@@ -38,7 +38,6 @@ Deno.serve(async (req: Request) => {
     const name = String(body?.name || "").trim().replace(/\s+/g, " ");
     const email = String(body?.email || "").trim().toLowerCase();
     const password = String(body?.password || "");
-    const referralCode = String(body?.referralCode || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 24);
 
     if (name.length < 2 || name.length > 80) {
       return json({ error: "Informe um nome válido." }, 400, origin);
@@ -88,23 +87,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Não foi possível criar sua conta agora." }, 500, origin);
     }
 
-    const userId = data.user?.id || null;
-    let referralAwarded = false;
-
-    if (referralCode && userId) {
-      const { data: claimResult, error: claimError } = await admin.rpc("claim_referral_signup", {
-        p_code: referralCode,
-        p_referred_user: userId,
-      });
-
-      if (claimError) {
-        console.error("register-immediate referral claim error", claimError);
-      } else {
-        referralAwarded = claimResult === true;
-      }
-    }
-
-    return json({ ok: true, userId, referralAwarded }, 201, origin);
+    return json({ ok: true, userId: data.user?.id || null }, 201, origin);
   } catch (error) {
     console.error("register-immediate unexpected error", error);
     return json({ error: "Não foi possível criar sua conta agora." }, 500, origin);
