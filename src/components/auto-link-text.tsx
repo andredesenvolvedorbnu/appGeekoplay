@@ -1,7 +1,11 @@
+'use client';
+
 import type { ReactNode } from 'react';
+import { RepostPreview } from '@/components/repost-preview';
 
 const TOKEN_RE=/([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|https?:\/\/[^\s<]+|www\.[^\s<]+|(?:[A-Z0-9](?:[A-Z0-9.-]*[A-Z0-9])?\.)+[A-Z]{2,}(?:\/[^\s<]*)?)/gi;
 const TRAILING=/[.,!?;:]+$/;
+const REPOST_RE=/^\[\[GEEKOPLAY_REPOST:([0-9a-f-]{36})\]\](?:\n([\s\S]*))?$/i;
 
 function splitTrailing(value:string){
  const match=value.match(TRAILING);
@@ -19,7 +23,7 @@ function isEmail(token:string){
  return /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(token);
 }
 
-export function AutoLinkText({text,className}:{text:string;className?:string}){
+function linkedParts(text:string){
  const parts:ReactNode[]=[];
  let last=0;
  for(const match of text.matchAll(TOKEN_RE)){
@@ -46,5 +50,17 @@ export function AutoLinkText({text,className}:{text:string;className?:string}){
   last=index+raw.length;
  }
  if(last<text.length)parts.push(text.slice(last));
- return <span className={className}>{parts}</span>;
+ return parts;
+}
+
+export function AutoLinkText({text,className}:{text:string;className?:string}){
+ const repost=text.match(REPOST_RE);
+ if(repost){
+  const note=(repost[2]||'').trim();
+  return <span className={className}>
+   {note&&<span className="mb-2 block whitespace-pre-wrap break-words">{linkedParts(note)}</span>}
+   <RepostPreview postId={repost[1]}/>
+  </span>;
+ }
+ return <span className={className}>{linkedParts(text)}</span>;
 }
