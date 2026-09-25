@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect,useMemo,useState } from 'react';
+import { useEffect,useMemo,useRef,useState } from 'react';
 import { Check,Copy,ExternalLink,Loader2,Repeat2,X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -8,9 +8,13 @@ type CardData={photo_url?:string|null;image_url?:string|null};
 type PostRow={id:string;author_id:string;content:string|null;image_url:string|null;video_url:string|null;category:string|null;post_type:string;card_data:CardData|null;original_post_id:string|null};
 type Profile={display_name:string;username:string|null;avatar_url:string|null};
 type ShareEventDetail={postId:string;url:string};
+type NativeShare=(data:ShareData)=>Promise<void>;
+
+const POST_URL_RE=/\/publicacao\/([0-9a-f-]{36})(?:[/?#]|$)/i;
 
 export function GeekoPlayShareProvider(){
  const supabase=useMemo(()=>createClient(),[]);
+ const nativeShareRef=useRef<NativeShare|null>(null);
  const [open,setOpen]=useState(false);
  const [url,setUrl]=useState('');
  const [post,setPost]=useState<PostRow|null>(null);
@@ -35,13 +39,33 @@ export function GeekoPlayShareProvider(){
  }
 
  useEffect(()=>{
-  const handler=(event:Event)=>{
+  if(typeof window==='undefined'||typeof navigator==='undefined')return;
+  const existing:NativeShare|null=typeof navigator.share==='function'?navigator.share.bind(navigator):null;
+  nativeShareRef.current=existing;
+
+  const eventHandler=(event:Event)=>{
    const detail=(event as CustomEvent<ShareEventDetail>).detail;
    if(!detail?.postId||!detail?.url)return;
    void loadPost(detail.postId,detail.url);
   };
-  window.addEventListener('geekoplay:share-post',handler);
-  return()=>window.removeEventListener('geekoplay:share-post',handler);
+
+  const shim:NativeShare=async data=>{
+   const shareUrl=typeof data?.url==='string'?data.url:'';
+   const match=shareUrl.match(POST_URL_RE);
+   if(match){await loadPost(match[1],shareUrl);return}
+   if(existing){await existing(data);return}
+   if(shareUrl&&navigator.clipboard){await navigator.clipboard.writeText(shareUrl)}
+  };
+
+  window.addEventListener('geekoplay:share-post',eventHandler);
+  try{Object.defineProperty(navigator,'share',{configurable:true,writable:true,value:shim})}catch{}
+
+  return()=>{
+   window.removeEventListener('geekoplay:share-post',eventHandler);
+   try{
+    if(existing)Object.defineProperty(navigator,'share',{configurable:true,writable:true,value:existing});
+   }catch{}
+  };
  },[supabase]);
 
  async function shareInside(){
@@ -74,8 +98,9 @@ export function GeekoPlayShareProvider(){
  }
 
  async function shareOutside(){
-  if(typeof navigator.share==='function'){
-   try{await navigator.share({title:'GeekoPlay',text:post?.content?.slice(0,120)||'Veja esta publicação no GeekoPlay',url});setOpen(false)}catch{}
+  const nativeShare=nativeShareRef.current;
+  if(nativeShare){
+   try{await nativeShare({title:'GeekoPlay',text:post?.content?.slice(0,120)||'Veja esta publicação no GeekoPlay',url});setOpen(false)}catch{}
   }else await copyLink();
  }
 
