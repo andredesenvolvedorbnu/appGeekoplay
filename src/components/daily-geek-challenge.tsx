@@ -37,6 +37,10 @@ export function DailyGeekChallenge(){
   if(error)return null;
   const next=(data||null) as QuizState|null;
   setQuizState(next);
+  if(next&&!next.available){
+   setQuizReady(false);
+   if(timerRef.current){window.clearTimeout(timerRef.current);timerRef.current=null}
+  }
   return next;
  }
 
@@ -68,8 +72,8 @@ export function DailyGeekChallenge(){
  },[supabase]);
 
  useEffect(()=>{
-  if(quizReady&&!showDiscovery&&phase==='idle')setPhase('invite');
- },[quizReady,showDiscovery,phase]);
+  if(quizReady&&quizState?.available&&!showDiscovery&&phase==='idle')setPhase('invite');
+ },[quizReady,quizState?.available,showDiscovery,phase]);
 
  function closeDiscovery(){
   if(userId)sessionStorage.setItem(`geekoplay:discovery:${userId}:session`,'1');
@@ -80,14 +84,17 @@ export function DailyGeekChallenge(){
   router.push('/explorar');
  }
 
- function closeQuiz(){setPhase('idle');setRun(null);setSelected(null);setFeedback(null);setMessage('')}
+ function closeQuiz(){
+  setQuizReady(false);
+  setPhase('idle');setRun(null);setSelected(null);setFeedback(null);setMessage('');
+ }
 
  async function startQuiz(category:string){
   setBusy(true);setMessage('');
   const {data,error}=await supabase.rpc('start_geek_quiz',{chosen_category:category});
   if(error){
    const msg=String(error.message||'');
-   if(msg.includes('cooldown'))setMessage('Seu desafio de hoje já foi concluído. Um novo quiz libera 24 horas depois.');
+   if(msg.includes('cooldown')){setMessage('Seu desafio de hoje já foi concluído. Um novo quiz libera 24 horas depois.');setQuizReady(false);await refreshState()}
    else if(msg.includes('not_eligible'))setMessage('Este desafio está disponível para os 1.000 primeiros geeks cadastrados.');
    else setMessage('Não foi possível iniciar o desafio agora. Tente novamente.');
    setBusy(false);return;
@@ -98,8 +105,10 @@ export function DailyGeekChallenge(){
   const first=Math.max(0,(next.questions||[]).findIndex(q=>!answered.has(q.id)));
   const earned=(next.answers||[]).reduce((sum,a)=>sum+(a.xpAwarded||0),0);
   if((next.answers||[]).length>=3){
+   setQuizReady(false);
    setFeedback({isCorrect:false,correctOption:0,correctAnswer:'',xpAwarded:0,quizXp:earned,profileXp:0,completed:true,answeredCount:3});
    setPhase('result');
+   await refreshState();
   }else{
    setQuestionIndex(first<0?0:first);setPhase('question');
   }
@@ -122,12 +131,20 @@ export function DailyGeekChallenge(){
    else setMessage('Não foi possível validar sua resposta. Nenhum XP foi prometido ou perdido; tente novamente.');
    setBusy(false);return;
   }
-  setFeedback(data as AnswerResult);setPhase('feedback');setBusy(false);
+  const result=data as AnswerResult;
+  setFeedback(result);
+  if(result.completed){
+   setQuizReady(false);
+   if(timerRef.current){window.clearTimeout(timerRef.current);timerRef.current=null}
+  }
+  setPhase('feedback');setBusy(false);
  }
 
  async function nextQuestion(){
   if(!feedback)return;
   if(feedback.completed){
+   setQuizReady(false);
+   if(timerRef.current){window.clearTimeout(timerRef.current);timerRef.current=null}
    setPhase('result');
    await refreshState();
    return;
