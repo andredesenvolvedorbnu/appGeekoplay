@@ -1,18 +1,16 @@
 'use client';
 
-import { useEffect,useMemo,useRef,useState } from 'react';
-import { Check,Copy,ExternalLink,Loader2,Repeat2,Share2,X } from 'lucide-react';
+import { useEffect,useMemo,useState } from 'react';
+import { Check,Copy,ExternalLink,Loader2,Repeat2,X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
-type ShareDataLike={title?:string;text?:string;url?:string};
-type PostRow={id:string;author_id:string;content:string|null;image_url:string|null;video_url:string|null;category:string|null;post_type:string;card_data:any;original_post_id:string|null};
+type CardData={photo_url?:string|null;image_url?:string|null};
+type PostRow={id:string;author_id:string;content:string|null;image_url:string|null;video_url:string|null;category:string|null;post_type:string;card_data:CardData|null;original_post_id:string|null};
 type Profile={display_name:string;username:string|null;avatar_url:string|null};
-
-const POST_URL_RE=/\/publicacao\/([0-9a-f-]{36})(?:[/?#]|$)/i;
+type ShareEventDetail={postId:string;url:string};
 
 export function GeekoPlayShareProvider(){
  const supabase=useMemo(()=>createClient(),[]);
- const nativeShareRef=useRef<((data:ShareDataLike)=>Promise<void>)|null>(null);
  const [open,setOpen]=useState(false);
  const [url,setUrl]=useState('');
  const [post,setPost]=useState<PostRow|null>(null);
@@ -37,23 +35,13 @@ export function GeekoPlayShareProvider(){
  }
 
  useEffect(()=>{
-  if(typeof window==='undefined'||typeof navigator==='undefined')return;
-  const existing=typeof navigator.share==='function'?navigator.share.bind(navigator):null;
-  nativeShareRef.current=existing as ((data:ShareDataLike)=>Promise<void>)|null;
-  const shim=async(data:ShareDataLike)=>{
-   const shareUrl=typeof data?.url==='string'?data.url:'';
-   const match=shareUrl.match(POST_URL_RE);
-   if(match){await loadPost(match[1],shareUrl);return}
-   if(existing){await existing(data as ShareData);return}
-   if(shareUrl&&navigator.clipboard){await navigator.clipboard.writeText(shareUrl);return}
+  const handler=(event:Event)=>{
+   const detail=(event as CustomEvent<ShareEventDetail>).detail;
+   if(!detail?.postId||!detail?.url)return;
+   void loadPost(detail.postId,detail.url);
   };
-  try{Object.defineProperty(navigator,'share',{configurable:true,writable:true,value:shim})}catch{return}
-  return()=>{
-   try{
-    if(existing)Object.defineProperty(navigator,'share',{configurable:true,writable:true,value:existing});
-    else delete (navigator as Navigator&{share?:unknown}).share;
-   }catch{}
-  };
+  window.addEventListener('geekoplay:share-post',handler);
+  return()=>window.removeEventListener('geekoplay:share-post',handler);
  },[supabase]);
 
  async function shareInside(){
@@ -67,8 +55,8 @@ export function GeekoPlayShareProvider(){
   if(cleanNote){
    try{
     const response=await fetch('/api/moderation/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contentType:'post',text:cleanNote,category:post.category||null,mediaKind:'none',images:[],parentId:post.id})});
-    const result=await response.json();
-    if(response.ok&&result?.decision&&result.decision!=='allow'){
+    const result=(await response.json()) as {decision?:'allow'|'review'|'block'};
+    if(response.ok&&result.decision&&result.decision!=='allow'){
      setStatus(result.decision==='review'?'Seu comentário precisa de revisão antes de ser publicado.':'Seu comentário não pôde ser compartilhado pelas Diretrizes da Comunidade.');setSharing(false);return;
     }
    }catch{}
@@ -86,9 +74,8 @@ export function GeekoPlayShareProvider(){
  }
 
  async function shareOutside(){
-  const nativeShare=nativeShareRef.current;
-  if(nativeShare){
-   try{await nativeShare({title:'GeekoPlay',text:post?.content?.slice(0,120)||'Veja esta publicação no GeekoPlay',url});setOpen(false)}catch{}
+  if(typeof navigator.share==='function'){
+   try{await navigator.share({title:'GeekoPlay',text:post?.content?.slice(0,120)||'Veja esta publicação no GeekoPlay',url});setOpen(false)}catch{}
   }else await copyLink();
  }
 
