@@ -11,7 +11,7 @@ type AdEvent={ad_id:string;created_at:string};
 function localDayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 
 export function AdLayer(){
- const supabase=useMemo(()=>createClient(),[]);const pathname=usePathname();const [ad,setAd]=useState<Ad|null>(null);const [userId,setUserId]=useState<string|null>(null);
+ const supabase=useMemo(()=>createClient(),[]);const pathname=usePathname();const [ad,setAd]=useState<Ad|null>(null);const [userId,setUserId]=useState<string|null>(null);const [imageRetry,setImageRetry]=useState(0);const [imageFailed,setImageFailed]=useState(false);
  useEffect(()=>{let cancelled=false;(async()=>{
   const {data:{user}}=await supabase.auth.getUser();if(!user||cancelled)return;setUserId(user.id);
   const start=new Date();start.setHours(0,0,0,0);
@@ -41,13 +41,15 @@ export function AdLayer(){
   }
  })();return()=>{cancelled=true}},[pathname,supabase]);
  useEffect(()=>{if(!ad?.display_seconds)return;const timer=window.setTimeout(()=>setAd(null),ad.display_seconds*1000);return()=>window.clearTimeout(timer)},[ad?.id,ad?.display_seconds]);
+ useEffect(()=>{setImageRetry(0);setImageFailed(false)},[ad?.id,ad?.image_url]);
  if(!ad)return null;
  async function click(){if(userId)void supabase.from('ad_events').insert({ad_id:ad!.id,user_id:userId,event_type:'click'});if(ad?.cta_url)window.open(ad.cta_url,'_blank','noopener,noreferrer')}
  async function copyCode(){if(ad?.promo_code){await navigator.clipboard.writeText(ad.promo_code)}}
 
  const isPopup=ad.placement==='popup';
- const media=<div onClick={()=>{if(ad.cta_url)void click()}} className={`relative flex w-full shrink-0 items-center justify-center overflow-hidden bg-black/40 ${ad.cta_url?'cursor-pointer':''} ${isPopup?'min-h-[200px] max-h-[50dvh] p-2 sm:min-h-[240px] sm:max-h-[54vh]':'aspect-[16/9] sm:aspect-[16/8]'}`}>
-   {ad.image_url?<img src={ad.image_url} alt={ad.title} className={isPopup?'block h-auto max-h-[48dvh] w-auto max-w-full object-contain object-center sm:max-h-[52vh]':'block h-full w-full object-contain object-center'}/>:<div className="flex min-h-[200px] w-full flex-col items-center justify-center gap-2 text-slate-500"><ImageIcon size={28}/><span className="text-xs">Imagem do anúncio</span></div>}
+ const imageSrc=ad.image_url?`${ad.image_url}${ad.image_url.includes('?')?'&':'?'}gp=${imageRetry}`:null;
+ const media=<div onClick={()=>{if(ad.cta_url)void click()}} className={`relative flex w-full shrink-0 items-center justify-center overflow-hidden bg-black/40 ${ad.cta_url?'cursor-pointer':''} ${isPopup?'min-h-[200px] max-h-[50dvh] sm:min-h-[240px] sm:max-h-[54vh]':'aspect-[16/9] sm:aspect-[16/8]'}`}>
+   {imageSrc&&!imageFailed?<img key={`${ad.id}-${imageRetry}`} src={imageSrc} alt={ad.title} loading="eager" decoding="async" referrerPolicy="no-referrer" onError={()=>{if(imageRetry<1)setImageRetry(1);else setImageFailed(true)}} className={isPopup?'block max-h-[50dvh] min-h-0 w-full max-w-full object-contain object-center sm:max-h-[54vh]':'block h-full w-full object-contain object-center'}/>:<div className="flex min-h-[200px] w-full flex-col items-center justify-center gap-2 px-6 text-center text-slate-500"><ImageIcon size={30}/><span className="text-xs font-semibold">Imagem do anúncio indisponível</span>{ad.image_url&&<span className="text-[10px] text-slate-600">A campanha continua acessível pelo botão abaixo.</span>}</div>}
    <button onClick={e=>{e.stopPropagation();setAd(null)}} className="absolute right-2 top-2 rounded-full bg-black/75 p-2 text-white shadow backdrop-blur" aria-label="Fechar anúncio"><X size={16}/></button>
  </div>;
 
