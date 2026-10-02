@@ -1,0 +1,58 @@
+name: Optimize listing video preload
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/optimize-listing-video-preload.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Prevent background video metadata downloads
+        shell: python
+        run: |
+          from pathlib import Path
+          files = [
+              'src/components/explore-client.tsx',
+              'src/components/messages-client.tsx',
+              'src/components/post-detail-client.tsx',
+              'src/components/public-profile-client.tsx',
+              'src/components/repost-preview.tsx',
+              'src/components/admin-reports-client.tsx',
+              'src/components/profile-tabs.tsx',
+          ]
+          changed=[]
+          for name in files:
+              path=Path(name)
+              text=path.read_text(encoding='utf-8')
+              count=text.count('preload="metadata"')
+              if count:
+                  text=text.replace('preload="metadata"','preload="none"')
+                  path.write_text(text,encoding='utf-8')
+                  changed.append((name,count))
+          if not changed:
+              raise SystemExit('No listing video preload occurrences found')
+          print('Changed:', changed)
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify production build
+        run: npm run build
+      - name: Commit optimization
+        run: |
+          git config user.name "GeekoPlay Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/components/explore-client.tsx src/components/messages-client.tsx src/components/post-detail-client.tsx src/components/public-profile-client.tsx src/components/repost-preview.tsx src/components/admin-reports-client.tsx src/components/profile-tabs.tsx
+          git commit -m "perf: avoid background video metadata downloads [skip listing-video-preload]"
+          git push
