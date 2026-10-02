@@ -1,5 +1,5 @@
 const CACHE_NAME='geekoplay-shell-v2';
-const MEDIA_CACHE='geekoplay-media-v1';
+const MEDIA_CACHE='geekoplay-media-v2';
 const STATIC_ASSETS=['/icon.svg'];
 const MAX_MEDIA_ENTRIES=220;
 
@@ -25,9 +25,16 @@ function isPublicSupabaseMedia(url){
   return url.pathname.includes('/storage/v1/object/public/');
 }
 
+function isRangeOrVideoRequest(request){
+  return Boolean(request.headers.get('range'))||request.destination==='video';
+}
+
 async function mediaCacheFirst(request){
   const cache=await caches.open(MEDIA_CACHE);
-  const cached=await cache.match(request);
+  // Public Storage URLs use immutable UUID paths. Query strings are commonly
+  // cache-busters, so ignore them when matching to avoid downloading the same
+  // image again and increasing cached egress.
+  const cached=await cache.match(request,{ignoreSearch:true});
   if(cached)return cached;
   const response=await fetch(request);
   if(response&&response.ok){
@@ -43,7 +50,9 @@ self.addEventListener('fetch',event=>{
   const url=new URL(request.url);
 
   if(isPublicSupabaseMedia(url)){
-    event.respondWith(mediaCacheFirst(request));
+    // Range/video responses are partial and are not reliable candidates for
+    // Cache Storage. Image and other complete media responses use cache-first.
+    if(!isRangeOrVideoRequest(request))event.respondWith(mediaCacheFirst(request));
     return;
   }
 
