@@ -128,6 +128,8 @@ function PostGallery({items}:{items:PostMedia[]}){
  </div>
 }
 
+const autoplayedFeedVideos=new Set<string>();
+
 function FeedVideo({src}:{src:string}){
  const videoRef=useRef<HTMLVideoElement>(null);
  const visibleRef=useRef(false);
@@ -155,10 +157,10 @@ function FeedVideo({src}:{src:string}){
     if(!video.paused)video.pause();
     return;
    }
-   if(manuallyPausedRef.current)return;
+   if(manuallyPausedRef.current||autoplayedFeedVideos.has(src))return;
    autoplayTimerRef.current=window.setTimeout(()=>{
     autoplayTimerRef.current=null;
-    if(!visibleRef.current||manuallyPausedRef.current)return;
+    if(!visibleRef.current||manuallyPausedRef.current||autoplayedFeedVideos.has(src))return;
     video.volume=0.5;
     video.muted=false;
     pauseOtherFeedVideos();
@@ -179,7 +181,7 @@ function FeedVideo({src}:{src:string}){
   playsInline
   preload="none"
   data-feed-video="true"
-  onPlay={()=>{manuallyPausedRef.current=false;pauseOtherFeedVideos()}}
+  onPlay={()=>{autoplayedFeedVideos.add(src);manuallyPausedRef.current=false;pauseOtherFeedVideos()}}
   onPause={()=>{if(visibleRef.current)manuallyPausedRef.current=true}}
   className="block max-h-[720px] max-w-full object-contain object-center"
  />;
