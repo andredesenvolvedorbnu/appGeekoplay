@@ -132,6 +132,7 @@ function FeedVideo({src}:{src:string}){
  const videoRef=useRef<HTMLVideoElement>(null);
  const visibleRef=useRef(false);
  const manuallyPausedRef=useRef(false);
+ const autoplayTimerRef=useRef<number|null>(null);
 
  function pauseOtherFeedVideos(){
   document.querySelectorAll<HTMLVideoElement>('video[data-feed-video="true"]').forEach(video=>{
@@ -143,26 +144,32 @@ function FeedVideo({src}:{src:string}){
   const video=videoRef.current;
   if(!video)return;
   video.volume=0.5;
+  const clearAutoplayTimer=()=>{if(autoplayTimerRef.current!==null){window.clearTimeout(autoplayTimerRef.current);autoplayTimerRef.current=null}};
   const observer=new IntersectionObserver(entries=>{
    const entry=entries[0];
    const visible=Boolean(entry?.isIntersecting&&entry.intersectionRatio>=0.85);
    visibleRef.current=visible;
+   clearAutoplayTimer();
    if(!visible){
     manuallyPausedRef.current=false;
     if(!video.paused)video.pause();
     return;
    }
    if(manuallyPausedRef.current)return;
-   video.volume=0.5;
-   video.muted=false;
-   pauseOtherFeedVideos();
-   void video.play().catch(()=>{
-    video.muted=true;
-    void video.play().catch(()=>{});
-   });
+   autoplayTimerRef.current=window.setTimeout(()=>{
+    autoplayTimerRef.current=null;
+    if(!visibleRef.current||manuallyPausedRef.current)return;
+    video.volume=0.5;
+    video.muted=false;
+    pauseOtherFeedVideos();
+    void video.play().catch(()=>{
+     video.muted=true;
+     void video.play().catch(()=>{});
+    });
+   },800);
   },{threshold:[0,0.25,0.65,1]});
   observer.observe(video);
-  return()=>{observer.disconnect();video.pause()};
+  return()=>{clearAutoplayTimer();observer.disconnect();video.pause()};
  },[src]);
 
  return <video
