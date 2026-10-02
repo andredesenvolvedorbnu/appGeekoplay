@@ -1,0 +1,52 @@
+name: Optimize feed video autoplay
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/optimize-video-autoplay.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  optimize:
+    if: ${{ !contains(github.event.head_commit.message, '[skip video-autoplay]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Delay autoplay until the video is intentionally visible
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('src/components/feed-client.tsx')
+          text = path.read_text(encoding='utf-8')
+          old = """ const videoRef=useRef<HTMLVideoElement>(null);\n const visibleRef=useRef(false);\n const manuallyPausedRef=useRef(false);\n"""
+          new = """ const videoRef=useRef<HTMLVideoElement>(null);\n const visibleRef=useRef(false);\n const manuallyPausedRef=useRef(false);\n const autoplayTimerRef=useRef<number|null>(null);\n"""
+          if text.count(old) != 1:
+              raise SystemExit('FeedVideo refs block changed unexpectedly')
+          text = text.replace(old, new, 1)
+
+          old_effect = """  video.volume=0.5;\n  const observer=new IntersectionObserver(entries=>{\n   const entry=entries[0];\n   const visible=Boolean(entry?.isIntersecting&&entry.intersectionRatio>=0.85);\n   visibleRef.current=visible;\n   if(!visible){\n    manuallyPausedRef.current=false;\n    if(!video.paused)video.pause();\n    return;\n   }\n   if(manuallyPausedRef.current)return;\n   video.volume=0.5;\n   video.muted=false;\n   pauseOtherFeedVideos();\n   void video.play().catch(()=>{\n    video.muted=true;\n    void video.play().catch(()=>{});\n   });\n  },{threshold:[0,0.25,0.65,1]});\n  observer.observe(video);\n  return()=>{observer.disconnect();video.pause()};\n"""
+          new_effect = """  video.volume=0.5;\n  const clearAutoplayTimer=()=>{if(autoplayTimerRef.current!==null){window.clearTimeout(autoplayTimerRef.current);autoplayTimerRef.current=null}};\n  const observer=new IntersectionObserver(entries=>{\n   const entry=entries[0];\n   const visible=Boolean(entry?.isIntersecting&&entry.intersectionRatio>=0.85);\n   visibleRef.current=visible;\n   clearAutoplayTimer();\n   if(!visible){\n    manuallyPausedRef.current=false;\n    if(!video.paused)video.pause();\n    return;\n   }\n   if(manuallyPausedRef.current)return;\n   autoplayTimerRef.current=window.setTimeout(()=>{\n    autoplayTimerRef.current=null;\n    if(!visibleRef.current||manuallyPausedRef.current)return;\n    video.volume=0.5;\n    video.muted=false;\n    pauseOtherFeedVideos();\n    void video.play().catch(()=>{\n     video.muted=true;\n     void video.play().catch(()=>{});\n    });\n   },800);\n  },{threshold:[0,0.25,0.65,1]});\n  observer.observe(video);\n  return()=>{clearAutoplayTimer();observer.disconnect();video.pause()};\n"""
+          if text.count(old_effect) != 1:
+              raise SystemExit('FeedVideo observer block changed unexpectedly')
+          text = text.replace(old_effect, new_effect, 1)
+          path.write_text(text, encoding='utf-8')
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify production build
+        run: npm run build
+      - name: Commit optimization
+        run: |
+          git config user.name "GeekoPlay Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/components/feed-client.tsx
+          git commit -m "perf: avoid accidental feed video downloads [skip video-autoplay]"
+          git push
