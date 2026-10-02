@@ -1,5 +1,7 @@
-const CACHE_NAME='geekoplay-shell-v1';
+const CACHE_NAME='geekoplay-shell-v2';
+const MEDIA_CACHE='geekoplay-media-v1';
 const STATIC_ASSETS=['/icon.svg'];
+const MAX_MEDIA_ENTRIES=220;
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(STATIC_ASSETS)).catch(()=>undefined));
@@ -7,14 +9,44 @@ self.addEventListener('install',event=>{
 });
 
 self.addEventListener('activate',event=>{
-  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))));
+  const keep=new Set([CACHE_NAME,MEDIA_CACHE]);
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>!keep.has(key)).map(key=>caches.delete(key)))));
   self.clients.claim();
 });
+
+async function trimMediaCache(){
+  const cache=await caches.open(MEDIA_CACHE);
+  const keys=await cache.keys();
+  if(keys.length<=MAX_MEDIA_ENTRIES)return;
+  await Promise.all(keys.slice(0,keys.length-MAX_MEDIA_ENTRIES).map(key=>cache.delete(key)));
+}
+
+function isPublicSupabaseMedia(url){
+  return url.pathname.includes('/storage/v1/object/public/');
+}
+
+async function mediaCacheFirst(request){
+  const cache=await caches.open(MEDIA_CACHE);
+  const cached=await cache.match(request);
+  if(cached)return cached;
+  const response=await fetch(request);
+  if(response&&response.ok){
+    await cache.put(request,response.clone()).catch(()=>undefined);
+    void trimMediaCache();
+  }
+  return response;
+}
 
 self.addEventListener('fetch',event=>{
   const request=event.request;
   if(request.method!=='GET')return;
   const url=new URL(request.url);
+
+  if(isPublicSupabaseMedia(url)){
+    event.respondWith(mediaCacheFirst(request));
+    return;
+  }
+
   if(url.origin!==self.location.origin)return;
   if(request.mode==='navigate'){
     event.respondWith(fetch(request));
@@ -24,7 +56,6 @@ self.addEventListener('fetch',event=>{
     event.respondWith(caches.match(request).then(cached=>cached||fetch(request)));
   }
 });
-
 
 self.addEventListener('push',event=>{
   let data={};
