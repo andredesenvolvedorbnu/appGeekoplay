@@ -1,0 +1,43 @@
+name: Apply profile media optimization
+
+on:
+  push:
+    paths:
+      - '.github/workflows/perf-profile-media.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Optimize profile media output
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/components/profile-client.tsx')
+          s=p.read_text()
+          replacements={
+            "const outputWidth=kind==='avatar'?1024:1800;const outputHeight=kind==='avatar'?1024:600;":"const outputWidth=kind==='avatar'?512:1600;const outputHeight=kind==='avatar'?512:533;",
+            ",'image/webp',0.9));return new File([blob]":",'image/webp',0.84));return new File([blob]",
+            '<img src={profile.cover_url} alt="Capa do perfil" className="absolute inset-0 block h-full w-full object-cover object-center"/>':'<img src={profile.cover_url} alt="Capa do perfil" decoding="async" className="absolute inset-0 block h-full w-full object-cover object-center"/>',
+            '<img src={profile.avatar_url} alt="Foto do perfil" className="h-full w-full object-cover"/>':'<img src={profile.avatar_url} alt="Foto do perfil" decoding="async" className="h-full w-full object-cover"/>'
+          }
+          for old,new in replacements.items():
+            if old not in s:
+              raise SystemExit(f'Expected snippet not found: {old}')
+            s=s.replace(old,new)
+          p.write_text(s)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "GeekoPlay Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/components/profile-client.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "perf: reduce profile avatar and cover payloads"
+          git push origin HEAD:main
