@@ -247,7 +247,7 @@ export function FeedClient(){
   setProfiles(profileMap);if(showLoader)setLoading(false);
  }
 
- useEffect(()=>{void reload();const channel=supabase.channel('feed-live-v4').on('postgres_changes',{event:'*',schema:'public',table:'posts'},()=>void reload(false)).on('postgres_changes',{event:'*',schema:'public',table:'comments'},()=>void reload(false)).on('postgres_changes',{event:'*',schema:'public',table:'comment_reactions'},()=>void reload(false)).on('postgres_changes',{event:'*',schema:'public',table:'likes'},()=>void reload(false)).on('postgres_changes',{event:'UPDATE',schema:'public',table:'profiles'},()=>void reload(false)).subscribe();return()=>{void supabase.removeChannel(channel)}},[supabase]);
+ useEffect(()=>{void reload();let timer:ReturnType<typeof setTimeout>|null=null;const scheduleReload=()=>{if(timer)clearTimeout(timer);timer=setTimeout(()=>void reload(false),300)};const channel=supabase.channel('feed-live-v4').on('postgres_changes',{event:'*',schema:'public',table:'posts'},scheduleReload).on('postgres_changes',{event:'*',schema:'public',table:'comments'},scheduleReload).on('postgres_changes',{event:'*',schema:'public',table:'comment_reactions'},scheduleReload).on('postgres_changes',{event:'*',schema:'public',table:'likes'},scheduleReload).on('postgres_changes',{event:'UPDATE',schema:'public',table:'profiles'},scheduleReload).subscribe();return()=>{if(timer)clearTimeout(timer);void supabase.removeChannel(channel)}},[supabase]);
 
  async function checkModeration(contentType:'post'|'comment',text:string,file:File|null,contentCategory?:string,parentId?:string){
   const images=await moderationImages(file);
