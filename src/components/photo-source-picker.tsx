@@ -15,8 +15,10 @@ type Props = {
   cameraFacing?: 'user' | 'environment';
 };
 
+const OPTIMIZE_OPTIONS={maxWidth:1600,maxHeight:1600,quality:0.82,preserveGif:true} as const;
+
 async function prepareFiles(files:File[]){
-  return Promise.all(files.map(file=>optimizeImageFile(file,{maxWidth:2000,maxHeight:2000,quality:0.86,preserveGif:true})));
+  return Promise.all(files.map(file=>optimizeImageFile(file,OPTIMIZE_OPTIONS)));
 }
 
 export function PhotoSourcePicker({onSelect,onSelectMany,multiple=false,accept='image/jpeg,image/png,image/webp',label='Carregar ou tirar uma foto',className='',cameraFacing='environment'}:Props){
@@ -62,7 +64,7 @@ export function PhotoSourcePicker({onSelect,onSelectMany,multiple=false,accept='
       if(!file){closePicker();onSelect(null);return}
       setPreparing(true);
       try{
-        const prepared=await optimizeImageFile(file,{maxWidth:2000,maxHeight:2000,quality:0.86,preserveGif:true});
+        const prepared=await optimizeImageFile(file,OPTIMIZE_OPTIONS);
         closePicker();
         onSelect(prepared);
       }finally{setPreparing(false)}
