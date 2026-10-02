@@ -294,7 +294,7 @@ export function FeedClient(){
   setSelectedImages(valid);setImagePreviews(valid.map(file=>URL.createObjectURL(file)));
  }
  function chooseFile(file:File|null){chooseFiles(file?[file]:[])}
- async function uploadSingleMedia(file:File){if(!userId)throw new Error('no user');setUploading(true);const isImage=IMAGE_TYPES.includes(file.type);const prepared=isImage?await compressFeedImage(file):file;const ext=prepared.name.split('.').pop()?.toLowerCase()||'bin';const path=`${userId}/${crypto.randomUUID()}.${ext}`;const {error}=await supabase.storage.from('posts').upload(path,prepared,{contentType:prepared.type,cacheControl:'3600',upsert:false});if(error)throw error;const {data}=supabase.storage.from('posts').getPublicUrl(path);return{url:data.publicUrl,path,file:prepared}}
+ async function uploadSingleMedia(file:File){if(!userId)throw new Error('no user');setUploading(true);const isImage=IMAGE_TYPES.includes(file.type);const prepared=isImage?await compressFeedImage(file):file;const ext=prepared.name.split('.').pop()?.toLowerCase()||'bin';const path=`${userId}/${crypto.randomUUID()}.${ext}`;const {error}=await supabase.storage.from('posts').upload(path,prepared,{contentType:prepared.type,cacheControl:'2592000',upsert:false});if(error)throw error;const {data}=supabase.storage.from('posts').getPublicUrl(path);return{url:data.publicUrl,path,file:prepared}}
  async function createPost(){
   if(!userId||(!content.trim()&&!selectedFile&&!selectedImages.length))return;
   setSending(true);setMessage('');const uploadedPaths:string[]=[];
