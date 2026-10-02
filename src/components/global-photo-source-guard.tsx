@@ -9,9 +9,15 @@ async function optimizeFiles(files:File[]){
 }
 
 function replaceInputFiles(input:HTMLInputElement,files:File[]){
-  const transfer=new DataTransfer();
-  files.forEach(file=>transfer.items.add(file));
-  input.files=transfer.files;
+  try{
+    if(typeof DataTransfer==='undefined')return false;
+    const transfer=new DataTransfer();
+    files.forEach(file=>transfer.items.add(file));
+    input.files=transfer.files;
+    return true;
+  }catch{
+    return false;
+  }
 }
 
 export function GlobalPhotoSourceGuard(){
@@ -55,7 +61,12 @@ export function GlobalPhotoSourceGuard(){
       setPreparing(true);
       try{
         const optimized=await optimizeFiles(files);
+        // Some older/mobile browsers may not support constructing DataTransfer.
+        // In that case keep the original FileList and continue normally rather
+        // than blocking an upload for a real user.
         replaceInputFiles(input,optimized);
+        input.dispatchEvent(new Event('change',{bubbles:true}));
+      }catch{
         input.dispatchEvent(new Event('change',{bubbles:true}));
       }finally{setPreparing(false)}
     };
@@ -82,9 +93,14 @@ export function GlobalPhotoSourceGuard(){
         if(files.length){
           setPreparing(true);
           const optimized=await optimizeFiles(files);
-          replaceInputFiles(input,optimized);
+          if(!replaceInputFiles(input,optimized)){
+            try{input.files=camera.files}catch{}
+          }
           input.dispatchEvent(new Event('change',{bubbles:true}));
         }
+      }catch{
+        try{input.files=camera.files}catch{}
+        input.dispatchEvent(new Event('change',{bubbles:true}));
       }finally{
         setPreparing(false);
         camera.remove();
