@@ -20,54 +20,25 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: Remove replaced and deleted media safely
+      - name: Clean popup ad media on deletion
         shell: python
         run: |
           from pathlib import Path
-
-          def replace_once(path, old, new):
-              text=path.read_text(encoding='utf-8')
-              if text.count(old)!=1:
-                  raise SystemExit(f'Unexpected match count in {path}: {text.count(old)}')
-              path.write_text(text.replace(old,new,1),encoding='utf-8')
-
-          p=Path('src/components/profile-client.tsx')
-          old="async function uploadEditedImage(file:File){if(!profile||!editor)return;setUploading(true);setError('');const bucket=editor.kind==='avatar'?'avatars':'covers';const path=`${profile.id}/${editor.kind}-${Date.now()}.webp`;"
-          new="async function uploadEditedImage(file:File){if(!profile||!editor)return;setUploading(true);setError('');const bucket=editor.kind==='avatar'?'avatars':'covers';const previousUrl=editor.kind==='avatar'?profile.avatar_url:profile.cover_url;const path=`${profile.id}/${editor.kind}-${Date.now()}.webp`;"
-          replace_once(p,old,new)
-          old="if(updateError||!data){await supabase.storage.from(bucket).remove([path]);setError('Não foi possível atualizar a imagem do perfil. Nenhuma cópia incompleta foi mantida.');setUploading(false);return}URL.revokeObjectURL(editor.preview);"
-          new="if(updateError||!data){await supabase.storage.from(bucket).remove([path]);setError('Não foi possível atualizar a imagem do perfil. Nenhuma cópia incompleta foi mantida.');setUploading(false);return}if(previousUrl&&previousUrl!==publicUrl){const marker=`/storage/v1/object/public/${bucket}/`;const encodedPath=previousUrl.includes(marker)?previousUrl.split(marker)[1]?.split('?')[0]:null;if(encodedPath){try{const oldPath=decodeURIComponent(encodedPath);if(oldPath&&oldPath!==path)await supabase.storage.from(bucket).remove([oldPath])}catch{}}}URL.revokeObjectURL(editor.preview);"
-          replace_once(p,old,new)
-
-          p=Path('src/components/admin-events-client.tsx')
-          old="setSaving(true);const wasEditing=Boolean(editing);try{const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error();const cover=await uploadCover(user.id);"
-          new="setSaving(true);const wasEditing=Boolean(editing);const previousCover=form.cover_url||null;try{const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error();const cover=await uploadCover(user.id);"
-          replace_once(p,old,new)
-          old="if(result.error)throw result.error;reset();setMessage(wasEditing?'Evento atualizado.':'Evento aprovado e publicado no calendário do GeekoPlay. As interações normais dos usuários já estão disponíveis.');"
-          new="if(result.error)throw result.error;if(file&&previousCover&&previousCover!==cover){const marker='/storage/v1/object/public/events/';const encodedPath=previousCover.includes(marker)?previousCover.split(marker)[1]?.split('?')[0]:null;if(encodedPath){try{await supabase.storage.from('events').remove([decodeURIComponent(encodedPath)])}catch{}}}reset();setMessage(wasEditing?'Evento atualizado.':'Evento aprovado e publicado no calendário do GeekoPlay. As interações normais dos usuários já estão disponíveis.');"
-          replace_once(p,old,new)
-          old="async function remove(id:string){if(!window.confirm('Excluir este evento? Essa ação não pode ser desfeita.'))return;const {error}=await supabase.from('events').delete().eq('id',id);setMessage(error?'Não foi possível excluir o evento.':'Evento excluído.');if(!error&&editing===id)reset();await load()}"
-          new="async function remove(id:string){if(!window.confirm('Excluir este evento? Essa ação não pode ser desfeita.'))return;const target=events.find(item=>item.id===id);const {error}=await supabase.from('events').delete().eq('id',id);if(!error&&target?.cover_url){const marker='/storage/v1/object/public/events/';const encodedPath=target.cover_url.includes(marker)?target.cover_url.split(marker)[1]?.split('?')[0]:null;if(encodedPath){try{await supabase.storage.from('events').remove([decodeURIComponent(encodedPath)])}catch{}}}setMessage(error?'Não foi possível excluir o evento.':'Evento excluído.');if(!error&&editing===id)reset();await load()}"
-          replace_once(p,old,new)
-
-          p=Path('src/components/admin-ads-client.tsx')
-          old="async function save(){if(!form.title.trim())return setMessage('Informe um título para o anúncio.');if(form.starts_at&&form.ends_at&&new Date(form.ends_at)<=new Date(form.starts_at))return setMessage('O término da campanha precisa ser depois do início.');setSaving(true);setMessage('');const editingId=editing;try{"
-          new="async function save(){if(!form.title.trim())return setMessage('Informe um título para o anúncio.');if(form.starts_at&&form.ends_at&&new Date(form.ends_at)<=new Date(form.starts_at))return setMessage('O término da campanha precisa ser depois do início.');setSaving(true);setMessage('');const editingId=editing;const previousImageUrl=form.image_url||null;try{"
-          replace_once(p,old,new)
-          old="if(result.error)throw result.error;reset();await load();setMessage(editingId?'Anúncio atualizado com sucesso.':'Anúncio criado com sucesso.')}catch(error)"
-          new="if(result.error)throw result.error;if(file&&editingId&&previousImageUrl&&previousImageUrl!==image_url){const marker='/storage/v1/object/public/ads/';const encodedPath=previousImageUrl.includes(marker)?previousImageUrl.split(marker)[1]?.split('?')[0]:null;if(encodedPath){try{await supabase.storage.from('ads').remove([decodeURIComponent(encodedPath)])}catch{}}}reset();await load();setMessage(editingId?'Anúncio atualizado com sucesso.':'Anúncio criado com sucesso.')}catch(error)"
-          replace_once(p,old,new)
-          old="async function remove(id:string){if(!confirm('Excluir este anúncio?'))return;await supabase.from('ads').delete().eq('id',id);await load()}"
-          new="async function remove(id:string){if(!confirm('Excluir este anúncio?'))return;const target=ads.find(item=>item.id===id);const {error}=await supabase.from('ads').delete().eq('id',id);if(!error&&target?.image_url){const marker='/storage/v1/object/public/ads/';const encodedPath=target.image_url.includes(marker)?target.image_url.split(marker)[1]?.split('?')[0]:null;if(encodedPath){try{await supabase.storage.from('ads').remove([decodeURIComponent(encodedPath)])}catch{}}}await load()}"
-          replace_once(p,old,new)
+          p=Path('src/components/admin-popup-ads-client.tsx')
+          text=p.read_text(encoding='utf-8')
+          old="async function remove(ad:Ad){if(!window.confirm(`Excluir o anúncio “${ad.title}”?`))return;await supabase.from('ads').delete().eq('id',ad.id);await load()}"
+          new="async function remove(ad:Ad){if(!window.confirm(`Excluir o anúncio “${ad.title}”?`))return;const {error}=await supabase.from('ads').delete().eq('id',ad.id);if(!error&&ad.image_url){const marker='/storage/v1/object/public/ads/';const encodedPath=ad.image_url.includes(marker)?ad.image_url.split(marker)[1]?.split('?')[0]:null;if(encodedPath){try{await supabase.storage.from('ads').remove([decodeURIComponent(encodedPath)])}catch{}}}await load()}"
+          if text.count(old)!=1:
+              raise SystemExit(f'Unexpected popup remove match count: {text.count(old)}')
+          p.write_text(text.replace(old,new,1),encoding='utf-8')
       - name: Install dependencies
         run: npm ci
       - name: Verify production build
         run: npm run build
-      - name: Commit leak guards
+      - name: Commit popup guard
         run: |
           git config user.name "GeekoPlay Automation"
           git config user.email "actions@users.noreply.github.com"
-          git add src/components/profile-client.tsx src/components/admin-events-client.tsx src/components/admin-ads-client.tsx
-          git commit -m "perf: prevent orphaned replaced media [skip storage-leak-guards]"
+          git add src/components/admin-popup-ads-client.tsx
+          git commit -m "perf: remove popup media with deleted ads [skip storage-leak-guards]"
           git push
