@@ -56,15 +56,24 @@ export function ImageCropper({file,aspect,title='Ajustar imagem',outputWidth=160
       const safeX=clamp(pos.x,-Math.max(0,(renderedW-fw)/2),Math.max(0,(renderedW-fw)/2));
       const safeY=clamp(pos.y,-Math.max(0,(renderedH-fh)/2),Math.max(0,(renderedH-fh)/2));
       const left=(fw-renderedW)/2+safeX;const top=(fh-renderedH)/2+safeY;
-      const outW=Math.max(320,outputWidth);const outH=Math.round(outW/effectiveAspect);
+
+      // Never upscale a source image just to meet the configured output width.
+      // This keeps new uploads materially smaller without touching any existing file.
+      const sourceCropWidth=Math.max(1,fw/scale);
+      const safeOutputWidth=Math.max(320,Math.min(outputWidth,Math.round(sourceCropWidth)));
+      const outW=safeOutputWidth;
+      const outH=Math.max(1,Math.round(outW/effectiveAspect));
       const canvas=document.createElement('canvas');canvas.width=outW;canvas.height=outH;
       const ctx=canvas.getContext('2d');if(!ctx)throw new Error('canvas');
       ctx.clearRect(0,0,outW,outH);
       ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
       const outScale=outW/fw;
       ctx.drawImage(img,left*outScale,top*outScale,renderedW*outScale,renderedH*outScale);
-      const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/webp',0.92));if(!blob)throw new Error('blob');
-      const cropped=new File([blob],`${file.name.replace(/\.[^.]+$/,'')}-recorte.webp`,{type:'image/webp'});
+
+      // WebP at 0.82 preserves visual quality for social media while substantially
+      // reducing Storage and egress. If encoding fails, nothing is uploaded here.
+      const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/webp',0.82));if(!blob)throw new Error('blob');
+      const cropped=new File([blob],`${file.name.replace(/\.[^.]+$/,'')}-recorte.webp`,{type:'image/webp',lastModified:Date.now()});
       const previewUrl=URL.createObjectURL(cropped);onConfirm(cropped,previewUrl);
     } finally {setSaving(false)}
   }
@@ -73,7 +82,7 @@ export function ImageCropper({file,aspect,title='Ajustar imagem',outputWidth=160
     <div className="flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-geek-line bg-geek-panel shadow-2xl sm:w-[80vw] sm:max-w-4xl">
       <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-5 sm:pt-5"><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-geek-orange">Editor de imagem</p><h2 className="text-xl font-semibold">{title}</h2></div><button type="button" onClick={onCancel} className="rounded-full border border-geek-line p-2" aria-label="Cancelar"><X size={18}/></button></div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 sm:px-5">
-        <p className="text-xs leading-5 text-slate-400 sm:text-sm">Arraste para reposicionar e use o zoom. Quando a proporção original estiver ativa, a imagem nunca será convertida para outro formato.</p>
+        <p className="text-xs leading-5 text-slate-400 sm:text-sm">Arraste para reposicionar e use o zoom. A imagem enviada é otimizada automaticamente para carregar mais rápido sem alterar seus arquivos já existentes.</p>
         <div ref={frameRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} className={`relative mx-auto mt-3 max-w-full cursor-grab touch-none overflow-hidden rounded-2xl border border-orange-500/30 bg-black/50 active:cursor-grabbing sm:mt-4 ${isPortrait?'':'w-full max-w-2xl'}`} style={{aspectRatio:String(effectiveAspect),width:isPortrait?`min(100%, ${effectiveAspect*58}dvh, ${effectiveAspect*40}rem)`:undefined,maxHeight:'58dvh'}}>
           <img ref={imageRef} src={url} alt="Imagem para recorte" draggable={false} onLoad={e=>setNatural({w:e.currentTarget.naturalWidth,h:e.currentTarget.naturalHeight})} className="pointer-events-none absolute left-1/2 top-1/2 max-w-none select-none" style={{width:baseW||undefined,height:baseH||undefined,transform:`translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px)) scale(${zoom})`}}/>
           <div className="pointer-events-none absolute inset-0 border border-white/40 shadow-[inset_0_0_0_9999px_rgba(0,0,0,.08)]"/>
