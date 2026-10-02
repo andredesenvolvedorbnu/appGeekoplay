@@ -407,12 +407,12 @@ export function FeedClient(){
   }catch{setMessage('Não foi possível verificar a edição agora. A publicação original foi mantida.')}
   finally{setEditing(false)}
  }
- function storagePath(url:string|null){if(!url)return null;const marker='/storage/v1/object/public/posts/';const index=url.indexOf(marker);if(index<0)return null;try{return decodeURIComponent(url.slice(index+marker.length))}catch{return null}}
+ function storagePath(url:string|null,bucket='posts'){if(!url)return null;const marker=`/storage/v1/object/public/${bucket}/`;const index=url.indexOf(marker);if(index<0)return null;try{return decodeURIComponent(url.slice(index+marker.length).split('?')[0])}catch{return null}}
  async function deletePost(post:Post){
   setOpenMenu(null);if(post.author_id!==userId||!window.confirm('Excluir esta publicação permanentemente?'))return;
   const {error}=await supabase.from('posts').delete().eq('id',post.id).eq('author_id',userId);
   if(error){setMessage('Não foi possível excluir a publicação.');return}
-  const paths=[storagePath(post.image_url),storagePath(post.video_url)].filter((path):path is string=>Boolean(path));if(paths.length)await supabase.storage.from('posts').remove(paths);
+  if(post.post_type==='card'){const cardPath=storagePath(post.card_data?.photo_url||post.image_url,'geek-cards');if(cardPath)await supabase.storage.from('geek-cards').remove([cardPath])}else{const paths=[storagePath(post.image_url),storagePath(post.video_url)].filter((path):path is string=>Boolean(path));if(paths.length)await supabase.storage.from('posts').remove(paths)}
   setMessage('Publicação excluída.');await reload();
  }
 
