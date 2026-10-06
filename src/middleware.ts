@@ -8,8 +8,8 @@ type CookieToSet={name:string;value:string;options?:CookieOptions};
 
 export async function middleware(request:NextRequest){
  const host=(request.headers.get('host')||'').toLowerCase().split(':')[0];
- if(host==='app-geekoplay.vercel.app'||host==='www.geekoplay.com'){
-  const canonical=new URL(request.nextUrl.pathname+request.nextUrl.search,'https://geekoplay.com');
+ if(host==='app-geekoplay.vercel.app'){
+  const canonical=new URL(request.nextUrl.pathname+request.nextUrl.search,'https://www.geekoplay.com');
   return NextResponse.redirect(canonical,308);
  }
  let response=NextResponse.next({request});
