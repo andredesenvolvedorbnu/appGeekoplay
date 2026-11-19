@@ -4,7 +4,8 @@ import { PulseStrip } from '@/components/pulse-strip';
 import { RecapReminder } from '@/components/recap-reminder';
 import { CommunityCarousel } from '@/components/community-carousel';
 import { DiscoverPeopleCta } from '@/components/discover-people-cta';
-import { EventFeedbackReminder } from '@/components/event-feedback-reminder';\nimport { GameSpotlight } from '@/components/game-spotlight';
+import { EventFeedbackReminder } from '@/components/event-feedback-reminder';
+import { GameSpotlight } from '@/components/game-spotlight';
 
 type HomePageProps={searchParams:Promise<{post?:string|string[]}>};
 
@@ -16,6 +17,7 @@ export default async function HomePage({searchParams}:HomePageProps){
     <EventFeedbackReminder/>
     <RecapReminder/>
     <PulseStrip/>
+    <GameSpotlight/>
     <CommunityCarousel/>
     <DiscoverPeopleCta/>
     <FeedClient/>
