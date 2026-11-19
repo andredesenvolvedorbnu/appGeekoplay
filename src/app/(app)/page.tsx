@@ -4,7 +4,7 @@ import { PulseStrip } from '@/components/pulse-strip';
 import { RecapReminder } from '@/components/recap-reminder';
 import { CommunityCarousel } from '@/components/community-carousel';
 import { DiscoverPeopleCta } from '@/components/discover-people-cta';
-import { EventFeedbackReminder } from '@/components/event-feedback-reminder';
+import { EventFeedbackReminder } from '@/components/event-feedback-reminder';\nimport { GameSpotlight } from '@/components/game-spotlight';
 
 type HomePageProps={searchParams:Promise<{post?:string|string[]}>};
 
