@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect,useMemo,useRef,useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Brain,CheckCircle2,Gamepad2,Loader2,Sparkles,Users,X,XCircle,Zap } from 'lucide-react';
+import { Brain,CheckCircle2,Gamepad2,Loader2,Sparkles,X,XCircle,Zap } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 type QuizState={eligible:boolean;available:boolean;activeRunId?:string;activeCategory?:string;nextAt?:string|null};
@@ -18,10 +17,8 @@ const CATEGORIES=[
 
 export function DailyGeekChallenge(){
  const supabase=useMemo(()=>createClient(),[]);
- const router=useRouter();
  const [userId,setUserId]=useState<string|null>(null);
  const [quizState,setQuizState]=useState<QuizState|null>(null);
- const [showDiscovery,setShowDiscovery]=useState(false);
  const [quizReady,setQuizReady]=useState(false);
  const [phase,setPhase]=useState<Phase>('idle');
  const [run,setRun]=useState<QuizRun|null>(null);
@@ -53,10 +50,6 @@ export function DailyGeekChallenge(){
    const state=await refreshState();
    if(!state?.eligible)return;
 
-   const discoveryKey=`geekoplay:discovery:${user.id}:session`;
-   if(!sessionStorage.getItem(discoveryKey)){
-    window.setTimeout(()=>{if(alive)setShowDiscovery(true)},500);
-   }
 
    if(state.available){
     const quizKey=`geekoplay:quiz-invite:${user.id}:session`;
@@ -72,17 +65,9 @@ export function DailyGeekChallenge(){
  },[supabase]);
 
  useEffect(()=>{
-  if(quizReady&&quizState?.available&&!showDiscovery&&phase==='idle')setPhase('invite');
- },[quizReady,quizState?.available,showDiscovery,phase]);
+  if(quizReady&&quizState?.available&&phase==='idle')setPhase('invite');
+ },[quizReady,quizState?.available,phase]);
 
- function closeDiscovery(){
-  if(userId)sessionStorage.setItem(`geekoplay:discovery:${userId}:session`,'1');
-  setShowDiscovery(false);
- }
- function discoverGeeks(){
-  closeDiscovery();
-  router.push('/explorar');
- }
 
  function closeQuiz(){
   setQuizReady(false);
@@ -157,16 +142,6 @@ export function DailyGeekChallenge(){
  const earned=feedback?.quizXp??totalBefore;
 
  return <>
-  {showDiscovery&&<Overlay onClose={closeDiscovery}>
-   <div className="p-5 sm:p-6">
-    <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-orange-500/15 text-orange-300"><Users size={27}/></div>
-    <p className="mt-4 text-center text-[10px] font-black uppercase tracking-[.18em] text-orange-300">Descobrir geeks</p>
-    <h2 className="mt-1 text-center text-2xl font-black">Quer conhecer alguns geeks?</h2>
-    <p className="mx-auto mt-2 max-w-sm text-center text-sm leading-6 text-slate-400">Encontre pessoas, fandoms e interesses que combinam com você dentro do GeekoPlay.</p>
-    <div className="mt-6 grid gap-2 sm:grid-cols-2"><button onClick={closeDiscovery} className="order-2 min-h-12 rounded-xl border border-geek-line bg-geek-soft px-4 font-bold text-slate-300 sm:order-1">Agora não</button><button onClick={discoverGeeks} className="order-1 min-h-12 rounded-xl bg-geek-orange px-4 font-black text-white sm:order-2">Quero conhecer</button></div>
-   </div>
-  </Overlay>}
-
   {phase!=='idle'&&<Overlay onClose={closeQuiz}>
    {phase==='invite'&&<div className="p-5 sm:p-6">
     <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-purple-500/15 text-purple-300"><Brain size={27}/></div>
